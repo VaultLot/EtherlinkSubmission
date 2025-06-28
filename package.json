@@ -5,18 +5,17 @@
     "main": "dist/dice-poker-client.js",
     "scripts": {
       "build": "tsc",
-      "start": "ts-node src/dice-poker-client.ts",
-      "agent": "ts-node src/poker-agent.ts",
-      "dev": "ts-node --watch src/dice-poker-client.ts",
-      "dev:agent": "ts-node --watch src/poker-agent.ts",
+      "start": "ts-node scripts/pvp.ts",
+      "agent": "ts-node agent/dealer.ts",
+      "dev": "ts-node --watch scripts/pvp.ts",
+      "dev:agent": "ts-node --watch agent/dealer.ts",
       "setup": "echo 'Make sure Ollama is installed and running. Run: ollama pull llama3.2:latest'"
     },
     "dependencies": {
       "ethers": "^6.8.0",
       "dotenv": "^16.3.1",
-      "@langchain/ollama": "^0.0.5",
-      "@langchain/core": "^0.1.0",
-      "@langchain/langgraph": "^0.0.34"
+      "ollama": "^0.5.0",
+      "axios": "^1.6.0"
     },
     "devDependencies": {
       "@types/node": "^20.8.0",
