@@ -1,29 +1,26 @@
 {
-    "name": "dice-poker-standalone",
+    "name": "dice-poker-agent",
     "version": "1.0.0",
-    "description": "Standalone TypeScript client and AI agent for DicePoker with Flow VRF using Ollama",
-    "main": "dist/dice-poker-client.js",
+    "description": "DicePoker AI Agent with Claude on Flow EVM",
+    "main": "dist/dealer.js",
     "scripts": {
         "build": "tsc",
         "start": "ts-node scripts/pvp.ts",
         "agent": "ts-node agent/dealer.ts",
         "dev": "ts-node --watch scripts/pvp.ts",
-        "dev:agent": "ts-node --watch agent/dealer.ts",
-        "setup": "echo 'Make sure Ollama is installed and running. Run: ollama pull llama3.2:latest'"
+        "dev:agent": "ts-node --watch agent/dealer.ts"
     },
     "dependencies": {
-        "@langchain/core": "^0.3.61",
-        "@langchain/langgraph": "^0.3.5",
-        "@langchain/ollama": "^0.2.3",
-        "axios": "^1.6.0",
-        "dotenv": "^16.3.1",
-        "ethers": "^6.8.0",
-        "ollama": "^0.5.0"
+        "@anthropic-ai/sdk": "^0.55.0",
+        "axios": "^1.10.0",
+        "dotenv": "^16.6.1",
+        "ethers": "^6.14.4",
+        "viem": "^2.31.4"
     },
     "devDependencies": {
-        "@types/node": "^20.8.0",
-        "ts-node": "^10.9.1",
-        "typescript": "^5.2.2"
+        "@types/node": "^20.19.1",
+        "ts-node": "^10.9.2",
+        "typescript": "^5.8.3"
     },
     "keywords": [
         "blockchain",
@@ -31,9 +28,8 @@
         "flow",
         "vrf",
         "ai-agent",
-        "typescript",
-        "ollama",
-        "local-llm"
+        "anthropic",
+        "claude"
     ],
     "author": "PPwoo",
     "license": "MIT"
