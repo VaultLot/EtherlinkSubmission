@@ -1,0 +1,38 @@
+{
+    "name": "dice-poker-standalone",
+    "version": "1.0.0",
+    "description": "Standalone TypeScript client and AI agent for DicePoker with Flow VRF using Ollama",
+    "main": "dist/dice-poker-client.js",
+    "scripts": {
+      "build": "tsc",
+      "start": "ts-node src/dice-poker-client.ts",
+      "agent": "ts-node src/poker-agent.ts",
+      "dev": "ts-node --watch src/dice-poker-client.ts",
+      "dev:agent": "ts-node --watch src/poker-agent.ts",
+      "setup": "echo 'Make sure Ollama is installed and running. Run: ollama pull llama3.2:latest'"
+    },
+    "dependencies": {
+      "ethers": "^6.8.0",
+      "dotenv": "^16.3.1",
+      "@langchain/ollama": "^0.0.5",
+      "@langchain/core": "^0.1.0",
+      "@langchain/langgraph": "^0.0.34"
+    },
+    "devDependencies": {
+      "@types/node": "^20.8.0",
+      "typescript": "^5.2.2",
+      "ts-node": "^10.9.1"
+    },
+    "keywords": [
+      "blockchain",
+      "poker",
+      "flow",
+      "vrf",
+      "ai-agent",
+      "typescript",
+      "ollama",
+      "local-llm"
+    ],
+    "author": "PPwoo",
+    "license": "MIT"
+  }
