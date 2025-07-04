@@ -1,0 +1,186 @@
+{
+  "_format": "hh-sol-artifact-1",
+  "contractName": "MockDeBridge",
+  "sourceName": "contracts/mocks/MockContracts.sol",
+  "abi": [
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "name": "conversionRates",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "tokenIn",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "tokenOut",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "amountIn",
+          "type": "uint256"
+        }
+      ],
+      "name": "getAmountOut",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_tokenAddress",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_amount",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_chainIdTo",
+          "type": "uint256"
+        },
+        {
+          "internalType": "bytes",
+          "name": "_receiver",
+          "type": "bytes"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_permit",
+          "type": "uint256"
+        },
+        {
+          "internalType": "bool",
+          "name": "_useAssetFee",
+          "type": "bool"
+        },
+        {
+          "internalType": "uint32",
+          "name": "_referralCode",
+          "type": "uint32"
+        },
+        {
+          "internalType": "bytes",
+          "name": "_autoParams",
+          "type": "bytes"
+        }
+      ],
+      "name": "send",
+      "outputs": [],
+      "stateMutability": "payable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "tokenIn",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "tokenOut",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "rate",
+          "type": "uint256"
+        }
+      ],
+      "name": "setConversionRate",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "components": [
+            {
+              "internalType": "address",
+              "name": "tokenIn",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "tokenOut",
+              "type": "address"
+            },
+            {
+              "internalType": "uint256",
+              "name": "amountIn",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "minAmountOut",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "deadline",
+              "type": "uint256"
+            },
+            {
+              "internalType": "bytes",
+              "name": "extraData",
+              "type": "bytes"
+            }
+          ],
+          "internalType": "struct MockDeBridge.SwapParams",
+          "name": "params",
+          "type": "tuple"
+        }
+      ],
+      "name": "swap",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }
+  ],
+  "bytecode": "0x608080604052346015576103bf908161001b8239f35b600080fdfe6080604052600436101561001257600080fd5b60003560e01c80634aa066521461023257806351152e2b146101fa5780635b469ce81461019f578063886cdb6f1461009f5763d0394e5c1461005357600080fd5b3461009a57602036600319011261009a5760043567ffffffffffffffff811161009a5760c0600319823603011261009a57610092602091600401610323565b604051908152f35b600080fd5b61010036600319011261009a576100b461024b565b5060643567ffffffffffffffff811161009a573660238201121561009a5780600401359067ffffffffffffffff82116101895760405191601f8101601f19908116603f0116830167ffffffffffffffff81118482101761018957604052808352366024828401011161009a57600092816024602094018483013701015260a4358015150361009a5760c43563ffffffff81160361009a5760e43567ffffffffffffffff811161009a573660238201121561009a57806004013567ffffffffffffffff811161009a573691016024011161009a57005b634e487b7160e01b600052604160045260246000fd5b3461009a57604036600319011261009a576101b861024b565b602435906001600160a01b038216820361009a576001600160a01b03908116600090815260208181526040808320949093168252928352819020549051908152f35b3461009a5761020836610261565b6001600160a01b039283166000908152602081815260408083209490951682529290925291902055005b3461009a57602061009261024536610261565b916102c4565b600435906001600160a01b038216820361009a57565b606090600319011261009a576004356001600160a01b038116810361009a57906024356001600160a01b038116810361009a579060443590565b818102929181159184041417156102ae57565b634e487b7160e01b600052601160045260246000fd5b60018060a01b0316600052600060205260406000209060018060a01b0316600052602052604060002054801561030b5761030790670de0b6b3a76400009261029b565b0490565b5090565b356001600160a01b038116810361009a5790565b6001600160a01b036103348261030f565b166000526000602052604060002061034e6020830161030f565b60018060a01b031660005260205260406000205490811561038057670de0b6b3a764000091604061030792013561029b565b6040915001359056fea264697066735822122003c8bfd3c3981a88774866d14f436b4a4fbc7216f9b9753be40b180fd7d2579f64736f6c634300081c0033",
+  "deployedBytecode": "0x6080604052600436101561001257600080fd5b60003560e01c80634aa066521461023257806351152e2b146101fa5780635b469ce81461019f578063886cdb6f1461009f5763d0394e5c1461005357600080fd5b3461009a57602036600319011261009a5760043567ffffffffffffffff811161009a5760c0600319823603011261009a57610092602091600401610323565b604051908152f35b600080fd5b61010036600319011261009a576100b461024b565b5060643567ffffffffffffffff811161009a573660238201121561009a5780600401359067ffffffffffffffff82116101895760405191601f8101601f19908116603f0116830167ffffffffffffffff81118482101761018957604052808352366024828401011161009a57600092816024602094018483013701015260a4358015150361009a5760c43563ffffffff81160361009a5760e43567ffffffffffffffff811161009a573660238201121561009a57806004013567ffffffffffffffff811161009a573691016024011161009a57005b634e487b7160e01b600052604160045260246000fd5b3461009a57604036600319011261009a576101b861024b565b602435906001600160a01b038216820361009a576001600160a01b03908116600090815260208181526040808320949093168252928352819020549051908152f35b3461009a5761020836610261565b6001600160a01b039283166000908152602081815260408083209490951682529290925291902055005b3461009a57602061009261024536610261565b916102c4565b600435906001600160a01b038216820361009a57565b606090600319011261009a576004356001600160a01b038116810361009a57906024356001600160a01b038116810361009a579060443590565b818102929181159184041417156102ae57565b634e487b7160e01b600052601160045260246000fd5b60018060a01b0316600052600060205260406000209060018060a01b0316600052602052604060002054801561030b5761030790670de0b6b3a76400009261029b565b0490565b5090565b356001600160a01b038116810361009a5790565b6001600160a01b036103348261030f565b166000526000602052604060002061034e6020830161030f565b60018060a01b031660005260205260406000205490811561038057670de0b6b3a764000091604061030792013561029b565b6040915001359056fea264697066735822122003c8bfd3c3981a88774866d14f436b4a4fbc7216f9b9753be40b180fd7d2579f64736f6c634300081c0033",
+  "linkReferences": {},
+  "deployedLinkReferences": {}
+}
