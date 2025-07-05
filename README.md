@@ -70,7 +70,6 @@ We've built a sophisticated system that blends cutting-edge AI with robust block
 * **Technical Detail:** Our React frontend uses `wagmi` for EVM wallet connections and `@onflow/fcl` for native Flow integration. We've built custom hooks (`useFCLStatus`) to detect the user's connection type and provide a tailored UI, showcasing the power of Flow's EVM compatibility.
 
 ***
-
 ## 🏗️ Technical Architecture
 
 Our system is composed of three core, interconnected components designed for security, scalability, and intelligence.
@@ -78,36 +77,36 @@ Our system is composed of three core, interconnected components designed for sec
 ```mermaid
 graph TD
     subgraph Frontend [React and Next.js]
-        A[User Interface] -->|Deposit/Withdraw| B(Wagmi / FCL Hooks)
+        A[User Interface] -->|Deposit/Withdraw| B(Wagmi / FCL Hooks);
     end
 
     subgraph FlowEVMTestnet [Flow EVM Testnet]
-        C[Vault.sol]
-        D[FlowVrfYieldStrategy.sol]
-        E[MockUSDC.sol]
-        F[Flow Native VRF]
+        C[Vault.sol];
+        D[FlowVrfYieldStrategy.sol];
+        E[MockUSDC.sol];
+        F[Flow Native VRF];
 
-        B -->|deposit()| C
-        C -->|depositToStrategy()| D
-        D -->|requestRandomness()| F
+        B -->|deposit()| C;
+        C -->|depositToStrategy()| D;
+        D -->|requestRandomness()| F;
     end
 
     subgraph AIAgentBackend [AI Agent Backend - Python and FastAPI]
-        G[API Endpoints]
-        H[LangChain Agent Executor]
-        I[OpenAI GPT-4o-mini]
-        J[ML Risk Model]
-        K[Web3.py]
+        G[API Endpoints];
+        H[LangChain Agent Executor];
+        I[OpenAI GPT-4o-mini];
+        J[ML Risk Model];
+        K[Web3.py];
 
-        G --> H
-        H -- "What should I do?" --> I
-        H -- "Assess this strategy" --> J
-        H -- "Execute transaction" --> K
+        G --> H;
+        H -- "What should I do?" --> I;
+        H -- "Assess this strategy" --> J;
+        H -- "Execute transaction" --> K;
     end
 
-    K -->|trigger_lottery_draw()| C
-    K -->|simulate_yield_harvest_and_deposit()| E
-    E -->|approve() & depositYield()| D
+    K -->|trigger_lottery_draw()| C;
+    K -->|simulate_yield_harvest_and_deposit()| E;
+    E -->|approve() & depositYield()| D;
 
     style Frontend fill:#cde4ff
     style FlowEVMTestnet fill:#d5f0d5
@@ -115,26 +114,27 @@ graph TD
 ```
 
 ### Core Contracts (Deployed on Flow Testnet)
-| Contract             | Address                                      | Description                                                          |
-| :------------------- | :------------------------------------------- | :------------------------------------------------------------------- |
-| **MockUSDC** | `0x4edbDC8Ed8Ca935513A2F06e231EE42FB6ed1d15` | An ERC20 token used for deposits and prize pools.                    |
-| **Lottery Vault** | `0xBaE8f26eDa40Ab353A34ce38F8917318d226318F` | The main vault where users deposit and withdraw funds.               |
+
+| Contract              | Address                                      | Description                                                           |
+| :-------------------- | :------------------------------------------- | :-------------------------------------------------------------------- |
+| **MockUSDC**          | `0x4edbDC8Ed8Ca935513A2F06e231EE42FB6ed1d15` | An ERC20 token used for deposits and prize pools.                     |
+| **Lottery Vault**     | `0xBaE8f26eDa40Ab353A34ce38F8917318d226318F` | The main vault where users deposit and withdraw funds.                |
 | **Flow VRF Strategy** | `0xf5DC9ca0518B45C3E372c3bC7959a4f3d1B18901` | The strategy that holds the prize pool and interacts with Flow's VRF. |
 
-***
+---
 
 ## 📊 Key Differentiators
 
 We're not just another DeFi protocol. We're creating a new category of financial product.
 
-| Solution                | Your Return                        | Management                  | Risk of Loss           | Gamified |
-| :---------------------- | :--------------------------------- | :-------------------------- | :--------------------- | :------- |
-| **Flow Prize Savings** | **Principal + Chance to Win Yield** | **Fully Passive (AI-Managed)** | **🔥 None** | **✅ Yes** |
-| Traditional Savings     | Principal + ~1% APY                | Passive                     | None                   | ❌ No      |
-| Lotteries / Gambling    | -100% (Usually)                    | Active                      | Very High              | ✅ Yes      |
-| Yield Aggregators (Yearn) | Principal + Yield                  | Passive                     | Smart Contract Risk    | ❌ No      |
+| Solution                  | Your Return                         | Management                     | Risk of Loss        | Gamified  |
+| :------------------------ | :---------------------------------- | :----------------------------- | :------------------ | :-------- |
+| **Flow Prize Savings**    | **Principal + Chance to Win Yield** | **Fully Passive (AI-Managed)** | **🔥 None**         | **✅ Yes** |
+| Traditional Savings       | Principal + \~1% APY                | Passive                        | None                | ❌ No      |
+| Lotteries / Gambling      | -100% (Usually)                     | Active                         | Very High           | ✅ Yes     |
+| Yield Aggregators (Yearn) | Principal + Yield                   | Passive                        | Smart Contract Risk | ❌ No      |
 
-***
+---
 
 ## 💰 Business Model & Go-To-Market
 
