@@ -1,4 +1,0 @@
-Traceback (most recent call last):
-  File "/Users/ppwoork/flow-agent1/flow-vault-agent/enhanced_vault_agent.py", line 6, in <module>
-    from web3.middleware import geth_poa_middleware
-ImportError: cannot import name 'geth_poa_middleware' from 'web3.middleware' (/Users/ppwoork/flow-agent1/venv/lib/python3.13/site-packages/web3/middleware/__init__.py)
