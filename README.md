@@ -70,48 +70,6 @@ We've built a sophisticated system that blends cutting-edge AI with robust block
 * **Technical Detail:** Our React frontend uses `wagmi` for EVM wallet connections and `@onflow/fcl` for native Flow integration. We've built custom hooks (`useFCLStatus`) to detect the user's connection type and provide a tailored UI, showcasing the power of Flow's EVM compatibility.
 
 ***
-## 🏗️ Technical Architecture
-
-Our system is composed of three core, interconnected components designed for security, scalability, and intelligence.
-
-```mermaid
-graph TD
-    subgraph Frontend [React and Next.js]
-        A[User Interface] -->|Deposit/Withdraw| B(Wagmi / FCL Hooks);
-    end
-
-    subgraph FlowEVMTestnet [Flow EVM Testnet]
-        C[Vault.sol];
-        D[FlowVrfYieldStrategy.sol];
-        E[MockUSDC.sol];
-        F[Flow Native VRF];
-
-        B -->|deposit()| C;
-        C -->|depositToStrategy()| D;
-        D -->|requestRandomness()| F;
-    end
-
-    subgraph AIAgentBackend [AI Agent Backend - Python and FastAPI]
-        G[API Endpoints];
-        H[LangChain Agent Executor];
-        I[OpenAI GPT-4o-mini];
-        J[ML Risk Model];
-        K[Web3.py];
-
-        G --> H;
-        H -- "What should I do?" --> I;
-        H -- "Assess this strategy" --> J;
-        H -- "Execute transaction" --> K;
-    end
-
-    K -->|trigger_lottery_draw()| C;
-    K -->|simulate_yield_harvest_and_deposit()| E;
-    E -->|approve() & depositYield()| D;
-
-    style Frontend fill:#cde4ff
-    style FlowEVMTestnet fill:#d5f0d5
-    style AIAgentBackend fill:#ffeacc
-```
 
 ## 🏗️ Technical Architecture
 
