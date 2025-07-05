@@ -77,11 +77,11 @@ Our system is composed of three core, interconnected components designed for sec
 
 ```mermaid
 graph TD
-    subgraph Frontend (React / Next.js)
+    subgraph Frontend [React and Next.js]
         A[User Interface] -->|Deposit/Withdraw| B(Wagmi / FCL Hooks)
     end
 
-    subgraph Flow EVM Testnet
+    subgraph FlowEVMTestnet [Flow EVM Testnet]
         C[Vault.sol]
         D[FlowVrfYieldStrategy.sol]
         E[MockUSDC.sol]
@@ -92,7 +92,7 @@ graph TD
         D -->|requestRandomness()| F
     end
 
-    subgraph "AI Agent Backend (Python / FastAPI)"
+    subgraph AIAgentBackend [AI Agent Backend - Python and FastAPI]
         G[API Endpoints]
         H[LangChain Agent Executor]
         I[OpenAI GPT-4o-mini]
@@ -110,8 +110,8 @@ graph TD
     E -->|approve() & depositYield()| D
 
     style Frontend fill:#cde4ff
-    style "Flow EVM Testnet" fill:#d5f0d5
-    style "AI Agent Backend (Python / FastAPI)" fill:#ffeacc
+    style FlowEVMTestnet fill:#d5f0d5
+    style AIAgentBackend fill:#ffeacc
 ```
 
 ### Core Contracts (Deployed on Flow Testnet)
