@@ -113,6 +113,59 @@ graph TD
     style AIAgentBackend fill:#ffeacc
 ```
 
+## 🏗️ Technical Architecture
+
+Our system is composed of three core, interconnected components designed for security, scalability, and intelligence.
+
+---
+
+```
+┌───────────────────────────────────────────────┐
+│               🌐 Frontend (React & Next.js)   │
+│-----------------------------------------------│
+│  🖥️  User Interface                           │
+│  🔗  Wallet Integration (Wagmi / FCL Hooks)  │
+└───────────────────────────────────────────────┘
+             │
+             ▼
+┌───────────────────────────────────────────────┐
+│        🔷 Flow EVM Testnet (Smart Contracts)  │
+│-----------------------------------------------│
+│  🏦 Vault.sol (Manage deposits/withdrawals)   │
+│  🎯 FlowVrfYieldStrategy.sol (Prize pool + VRF)│
+│  💵 MockUSDC.sol (ERC20 token)                 │
+│  🎲 Flow Native VRF (Randomness)              │
+└───────────────────────────────────────────────┘
+             │
+             ▼
+┌───────────────────────────────────────────────┐
+│     🤖 AI Agent Backend (Python + FastAPI)    │
+│-----------------------------------------------│
+│  🚪 API Endpoints                             │
+│  🧠 LangChain Agent Executor                 │
+│  🔍 OpenAI GPT-4o-mini                        │
+│  📊 ML Risk Model                             │
+│  ⛓️  Web3.py                                  │
+└───────────────────────────────────────────────┘
+```
+
+---
+
+### 🔄 **How It Works (At a Glance)**
+
+📥 **Step 1:** User deposits funds on the frontend → triggers Wagmi/FCL Hook → calls `Vault.sol`.
+
+📤 **Step 2:** `Vault.sol` deposits into `FlowVrfYieldStrategy.sol`.
+
+🎲 **Step 3:** Strategy requests randomness from Flow Native VRF for lottery outcomes.
+
+🤖 **Step 4:** AI Agent Backend:
+
+* Receives triggers (e.g., run lottery, harvest yield).
+* Decides optimal actions via GPT-4o-mini + ML Risk Model.
+* Executes blockchain transactions through Web3.py.
+
+
 ### Core Contracts (Deployed on Flow Testnet)
 
 | Contract              | Address                                      | Description                                                           |
