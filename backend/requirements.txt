@@ -1,0 +1,14 @@
+    # LangChain and AI
+    langchain
+    langchain-openai
+    
+    # Blockchain Interaction
+    web3
+    
+    # Web Server
+    fastapi
+    uvicorn
+    
+    # Environment Management
+    python-dotenv
+    
