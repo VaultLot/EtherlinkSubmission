@@ -206,13 +206,13 @@ This project contains a full-stack application with smart contracts, an AI backe
 ### Installation & Setup
 1.  **Clone the Repository:**
     ```bash
-    git clone <your-repo-url>
-    cd <repo-folder>
+    git clone https://github.com/TroveFi/submission-repo
+    cd backend
     ```
 
 2.  **Set Up AI Backend:**
     ```bash
-    cd <backend-folder>
+    cd backend
     python3 -m venv venv
     source venv/bin/activate  # On Windows: venv\Scripts\activate
     pip install -r requirements.txt
