@@ -176,6 +176,30 @@ Our system is composed of three core, interconnected components designed for sec
 
 ---
 
+## 🔬 Under the Hood: A Modular & Scalable Contract Framework
+
+While the current testnet deployment uses a focused set of contracts to power the core prize-savings game, we have built a comprehensive and modular smart contract system designed for rapid, secure expansion. This architecture is the foundation for our long-term vision and is ready for future deployment.
+
+This forward-thinking framework includes several key components:
+
+### 1. The `VaultFactory.sol`
+* **Purpose:** This factory contract is designed to deploy new, isolated `Vault` instances permissionlessly.
+* **Vision:** This enables the creation of a multi-vault ecosystem where different communities, or even individuals, can launch their own prize-savings games with unique assets or configurations, all managed by our AI agent framework.
+
+### 2. Pluggable Yield Strategies (`Strategies.sol`)
+* **Purpose:** We've designed a generic strategy interface that can interact with any external DeFi protocol simply by defining its function selectors.
+* **Vision:** This makes our system incredibly adaptable. Integrating a new yield source becomes a simple matter of deploying a new strategy adapter, not re-writing the core vault logic. To prove this model, we have already built production-ready implementations for major protocols:
+    * **`AaveV3Strategy.sol`**: A complete strategy for earning yield on Aave.
+    * **`CompoundV3Strategy.sol`**: A complete strategy for earning yield on Compound.
+
+### 3. User Experience & Automation Contracts
+* **`AutoDepositProxy.sol`**: This helper contract is designed to enhance user experience by allowing for one-click deposits. For example, funds bridged from another chain can be sent directly to this proxy, which then automatically deposits them into the vault on behalf of the user, saving gas and steps.
+
+This modular design is what allows our **Future Roadmap** to be so ambitious. The foundation is already built to support real multi-protocol and multi-chain yield generation in a secure and scalable way.
+
+
+---
+
 ## 📊 Key Differentiators
 
 We're not just another DeFi protocol. We're creating a new category of financial product.
