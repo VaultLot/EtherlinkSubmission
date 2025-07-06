@@ -1,4 +1,4 @@
-# Flow Prize Savings: The AI-Powered Savings Game
+# TroveFi Flow Yield Draw: The AI-Powered Yield Raffle Game
 
 **Where financial growth meets the thrill of the win. We are turning passive savings into an active, rewarding experience you can't lose.**
 

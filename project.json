@@ -1,0 +1,38 @@
+{
+    "name": "TroveFi",
+    "tagline": "A no-loss prize savings protocol on Flow with AI-powered risk management",
+    "description": "TroveFi lets users deposit USDC into a vault on Flow EVM testnet and participate in weekly lotteries funded by yield. A backend Python agent autonomously manages funds, executes draws using Flow VRF, and monitors deployed strategies with an ML anomaly detection model. The frontend is a Next.js dApp using Flow Client Library (FCL).",
+    "team": [
+      {
+        "name": "Xcersh",
+        "email": "xiremol1010@gmail.com"
+      }
+    ],
+    "demo_url": "https://startling-lolly-07ea9a.netlify.app/",
+    "video_url": "https://drive.google.com/file/d/1cfjMzw7jGcepljxDOASqhLOUzN8uoLKG/view?usp=sharing",
+    "technologies": [
+      "Next.js",
+      "React",
+      "FCL (Flow Client Library)",
+      "FastAPI",
+      "LangChain",
+      "OpenAI GPT-4o-mini",
+      "Web3.py",
+      "Flow EVM Testnet",
+      "VRF (Verifiable Random Function)",
+      "Python",
+      "Pandas",
+      "Scikit-learn",
+      "IsolationForest (Anomaly Detection)",
+      "StandardScaler",
+      "PCA (Principal Component Analysis)",
+      "joblib (Model Serialization)",
+      "dotenv",
+      "Uvicorn",
+      "Pydantic",
+      "Etherscan API (for ML training data)",
+      "Coinbase AgentKit (optional extension)",
+      "Cadence (Flow Smart Contracts)"
+    ]
+  }
+  
