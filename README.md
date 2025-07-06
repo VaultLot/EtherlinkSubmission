@@ -1,5 +1,9 @@
-# TroveFi Flow Yield Draw: The AI-Powered Yield Raffle Game
+# TroveFi: The AI-Powered Yield Raffle Game
 
+### [Live App](https://startling-lolly-07ea9a.netlify.app/)
+### [Backend Agent](./backend)
+### [Demo Video](https://drive.google.com/file/d/1cfjMzw7jGcepljxDOASqhLOUzN8uoLKG/view?usp=sharing)
+   
 **Where financial growth meets the thrill of the win. We are turning passive savings into an active, rewarding experience you can't lose.**
 
 ***
