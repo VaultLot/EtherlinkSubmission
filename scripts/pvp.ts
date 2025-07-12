@@ -182,10 +182,11 @@ class DicePokerClient {
     const roundCommitted = await this.contract.roundBet(this.wallet.address);
     const toCall = currentBet - roundCommitted;
     
-    if (toCall === 0n) {
-      console.log("🔔 Nothing to call");
-      return;
-    }
+    // Fix: Proper BigInt comparison
+    if (toCall <= 0n) {
+        console.log("🔔 Nothing to call");
+        return;
+      }
     
     const startTime = Date.now();
     console.log(`📞 Calling ${ethers.formatEther(toCall)} FLOW...`);
@@ -255,7 +256,7 @@ class DicePokerClient {
   }
 
   public async run(): Promise<void> {
-    console.log(`\n🎲 DicePoker Standalone Client on ${CONFIG.FLOW_TESTNET.name}`);
+    console.log(`\n🎲 DicePoker PVP Client on ${CONFIG.FLOW_TESTNET.name}`);
     console.log("🔮 Using cryptographically secure randomness from Flow's native VRF!");
     console.log("🏆 Win by highest total of your 5 dice; tie splits the pot.");
     console.log(`🔑 Using wallet: ${this.wallet.address}\n`);
