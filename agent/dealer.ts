@@ -1,18 +1,31 @@
-import { StateGraph, MemorySaver, Annotation } from "@langchain/langgraph";
-import { ChatOllama } from "@langchain/ollama";
-import { HumanMessage, SystemMessage } from "@langchain/core/messages";
+import Anthropic from '@anthropic-ai/sdk';
+import { createWalletClient, createPublicClient, http, parseEther, formatEther } from 'viem';
 import { ethers } from 'ethers';
 import * as dotenv from 'dotenv';
 
 dotenv.config();
 
-// Configuration
-const CONFIG = {
-  FLOW_TESTNET: {
-    rpc: "https://testnet.evm.nodes.onflow.org",
-    chainId: 545,
-    name: "Flow EVM Testnet"
+// Flow Testnet Configuration
+const FLOW_TESTNET = {
+  id: 545,
+  name: 'Flow Testnet',
+  nativeCurrency: {
+    decimals: 18,
+    name: 'Flow',
+    symbol: 'FLOW',
   },
+  rpcUrls: {
+    default: {
+      http: ['https://testnet.evm.nodes.onflow.org'],
+    },
+  },
+  blockExplorers: {
+    default: { name: 'FlowScan', url: 'https://evm-testnet.flowscan.io' },
+  },
+  testnet: true,
+} as const;
+
+const CONFIG = {
   CONTRACT_ADDRESS: "0xC0933C5440c656464D1Eb1F886422bE3466B1459",
   ZERO_ADDRESS: "0x0000000000000000000000000000000000000000"
 };
@@ -31,7 +44,7 @@ const DICE_POKER_ABI = [
   "function resetIfExpired()",
   "function roundBet(address) view returns (uint256)",
   "function CADENCE_ARCH() view returns (address)",
-];
+] as const;
 
 const STATE_NAMES = [
   "Joining",
@@ -46,186 +59,210 @@ const STATE_NAMES = [
   "DetermineWinner", "Tie", "GameEnded"
 ];
 
-// State definition for the poker agent
-const PokerAgentState = Annotation.Root({
-  gameState: Annotation<any>(),
-  myIndex: Annotation<number>(),
-  opponentAddress: Annotation<string>(),
-  messages: Annotation<string[]>(),
-  gamePhase: Annotation<string>(),
-  strategy: Annotation<string>(),
-  personality: Annotation<string>(),
-  lastAction: Annotation<string>(),
-  potSize: Annotation<string>(),
-  myDice: Annotation<number[]>(),
-  opponentDice: Annotation<number[]>(),
-  revealedDice: Annotation<number>(),
-  opponentProfile: Annotation<any>(),
-});
-
-interface GameState {
-  state: number;
-  players: [string, string];
-  bets: [bigint, bigint];
-  dice: [number[], number[]];
-  meIdx: number;
-}
-
 interface PlayerProfile {
   address: string;
   balance: string;
   transactionCount: number;
-  firstSeen: string;
-  contractInteractions: number;
   riskLevel: 'conservative' | 'moderate' | 'aggressive' | 'whale';
   personality: string;
 }
 
-class DicePokerClient {
-  protected provider: ethers.JsonRpcProvider;
-  protected wallet: ethers.Wallet;
-  protected contract: ethers.Contract;
+interface GameState {
+  state: number;
+  stateName: string;
+  players: [string, string];
+  bets: [string, string];
+  dice: [number[], number[]];
+  myIndex: number;
+  isMyTurn: boolean;
+  pot: string;
+  revealedDice: number;
+}
 
-  constructor(privateKey: string) {
-    this.provider = new ethers.JsonRpcProvider(CONFIG.FLOW_TESTNET.rpc);
-    this.wallet = new ethers.Wallet(privateKey, this.provider);
-    this.contract = new ethers.Contract(CONFIG.CONTRACT_ADDRESS, DICE_POKER_ABI, this.wallet);
+class ClaudePokerAgent {
+  private anthropic: Anthropic;
+  private walletClient: any;
+  private publicClient: any;
+  private contract: any;
+  private personality: string;
+  private opponentProfile: PlayerProfile | null = null;
+
+  constructor(privateKey: string, personality: string = "confident_professional") {
+    this.personality = personality;
+    this.setupClients(privateKey);
+    this.setupClaude();
   }
 
-  protected async getDice(playerIndex: number): Promise<number[]> {
+  private setupClients(privateKey: string) {
+    // Setup Viem clients for Flow testnet
+    this.walletClient = createWalletClient({
+      chain: FLOW_TESTNET,
+      transport: http('https://testnet.evm.nodes.onflow.org'),
+      account: privateKey as `0x${string}`,
+    });
+
+    this.publicClient = createPublicClient({
+      chain: FLOW_TESTNET,
+      transport: http('https://testnet.evm.nodes.onflow.org'),
+    });
+
+    // Setup ethers contract for easier interaction
+    const provider = new ethers.JsonRpcProvider('https://testnet.evm.nodes.onflow.org');
+    const wallet = new ethers.Wallet(privateKey, provider);
+    this.contract = new ethers.Contract(CONFIG.CONTRACT_ADDRESS, DICE_POKER_ABI, wallet);
+  }
+
+  private setupClaude() {
+    this.anthropic = new Anthropic({
+      apiKey: process.env.ANTHROPIC_API_KEY!,
+    });
+  }
+
+  private async askClaude(prompt: string): Promise<string> {
+    try {
+      const response = await this.anthropic.messages.create({
+        model: 'claude-3-5-haiku-20241022',
+        max_tokens: 300,
+        temperature: 0.8,
+        system: this.getSystemPrompt(),
+        messages: [
+          {
+            role: 'user',
+            content: prompt
+          }
+        ]
+      });
+
+      const content = response.content[0];
+      if (content.type === 'text') {
+        return content.text;
+      }
+      return "I'm thinking...";
+    } catch (error) {
+      console.error("Claude API error:", error);
+      return this.getFallbackResponse();
+    }
+  }
+
+  private getSystemPrompt(): string {
+    const personalities = {
+      confident_professional: `You are a confident, witty poker professional playing DicePoker on Flow blockchain. 
+        You analyze opponents' on-chain activity and make clever references to their wallet history. 
+        You're sharp, analytical, but with a great sense of humor. Always stay in character.`,
+      
+      friendly_competitor: `You are a friendly but competitive poker player with a knack for light-hearted trash talk. 
+        You notice details about opponents and make playful comments about their blockchain activity. 
+        Keep it fun but competitive.`,
+      
+      analytical_shark: `You are a data-driven poker shark who treats on-chain analysis like advanced poker tells. 
+        You speak in probabilities but with entertaining quips about opponents' financial habits. 
+        Make everything about the numbers and patterns.`,
+      
+      charming_gambler: `You are a charming, old-school gambler who's embraced the digital age. 
+        You make witty observations about opponents' wallets and transaction history with style and flair. 
+        Think James Bond meets crypto trader.`
+    };
+
+    return personalities[this.personality as keyof typeof personalities] || personalities.confident_professional + `
+
+You are playing DicePoker on Flow blockchain testnet:
+- 5 dice per player
+- 4 betting rounds 
+- VRF randomness for dice rolls
+- Highest sum wins
+
+When making decisions, respond with:
+ACTION: [join/bet_small/bet_medium/bet_large/call/fold/roll/wait]
+MESSAGE: [your witty table talk incorporating opponent analysis]
+
+Keep messages entertaining, 1-2 sentences max. Reference opponent's wallet stats when available.`;
+  }
+
+  private async getGameState(): Promise<GameState> {
+    const state = Number(await this.contract.currentState());
+    const players = [
+      await this.contract.players(0),
+      await this.contract.players(1)
+    ] as [string, string];
+    
+    const bets = [
+      await this.contract.bets(0),
+      await this.contract.bets(1)
+    ];
+    
+    const dice = [
+      await this.getDice(0),
+      await this.getDice(1)
+    ] as [number[], number[]];
+    
+    const myIndex = players.findIndex(
+      p => p.toLowerCase() === this.walletClient.account.address.toLowerCase()
+    );
+
+    const revealedDice = this.getRevealedDiceCount(state);
+
+    return {
+      state,
+      stateName: STATE_NAMES[state],
+      players,
+      bets: [ethers.formatEther(bets[0] || 0n), ethers.formatEther(bets[1] || 0n)] as [string, string],
+      dice,
+      myIndex,
+      isMyTurn: this.isMyTurn(state, myIndex),
+      pot: ethers.formatEther((bets[0] || 0n) + (bets[1] || 0n)),
+      revealedDice
+    };
+  }
+
+  private async getDice(playerIndex: number): Promise<number[]> {
     const dice: number[] = [];
     for (let i = 0; i < 5; i++) {
-      let retries = 3;
-      while (retries > 0) {
-        try {
-          const value = await this.contract.playerDice(playerIndex, i);
-          dice.push(Number(value));
-          break;
-        } catch (error) {
-          retries--;
-          if (retries === 0) {
-            console.log(`⚠️ RPC error fetching dice, using 0 for display`);
-            dice.push(0);
-          } else {
-            console.log(`🔄 RPC timeout, retrying... (${retries} left)`);
-            await this.sleep(1000);
-          }
-        }
+      try {
+        const value = await this.contract.playerDice(playerIndex, i);
+        dice.push(Number(value));
+      } catch (error) {
+        dice.push(0);
       }
     }
     return dice;
   }
 
-  protected async getGameState(): Promise<GameState> {
-    const state = Number(await this.contract.currentState());
-    const players: [string, string] = [
-      await this.contract.players(0),
-      await this.contract.players(1)
-    ];
-    const bets: [bigint, bigint] = [
-      await this.contract.bets(0),
-      await this.contract.bets(1)
-    ];
-    const dice: [number[], number[]] = [
-      await this.getDice(0),
-      await this.getDice(1)
-    ];
-    const meIdx = players.findIndex(p => p.toLowerCase() === this.wallet.address.toLowerCase());
-
-    return { state, players, bets, dice, meIdx };
-  }
-
-  protected async sleep(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
-  }
-
-  protected async joinGame(): Promise<void> {
-    console.log("🎮 Joining game...");
-    const tx = await this.contract.joinGame();
-    await tx.wait();
-    console.log("✅ Joined game successfully!");
-  }
-
-  protected async callBet(): Promise<void> {
-    const currentBet = await this.contract.currentBet();
-    const roundCommitted = await this.contract.roundBet(this.wallet.address);
-    const toCall = currentBet - roundCommitted;
-    
-    // Fix: Proper BigInt comparison
-    if (toCall <= 0n) {
-      console.log("🔔 Nothing to call");
-      return;
-    }
-    
-    console.log(`📞 Calling ${ethers.formatEther(toCall)} FLOW...`);
-    const tx = await this.contract.call({ value: toCall });
-    await tx.wait();
-    console.log("✅ Call successful");
-  }
-
-  protected async fold(): Promise<void> {
-    console.log("🏳️ Folding...");
-    const tx = await this.contract.fold();
-    await tx.wait();
-    console.log("💥 Folded");
-  }
-
-  protected async rollDice(): Promise<void> {
-    console.log("🎲 Agent rolling dice with VRF...");
-    const tx = await this.contract.rollDice();
-    await tx.wait();
-    console.log("✅ Dice rolled with VRF");
-  }
-
-  protected async resetGame(): Promise<void> {
-    console.log("🔄 Resetting game...");
-    const tx = await this.contract.resetIfExpired();
-    await tx.wait();
-    console.log("✅ Game reset");
-  }
-
-  // New method to analyze opponent's on-chain activity
-  protected async analyzeOpponent(address: string): Promise<PlayerProfile> {
+  private async analyzeOpponent(address: string): Promise<PlayerProfile> {
     try {
-      const balance = await this.provider.getBalance(address);
-      const txCount = await this.provider.getTransactionCount(address);
+      const balance = await this.publicClient.getBalance({ address });
+      const txCount = await this.publicClient.getTransactionCount({ address });
       
-      // Get recent transactions (simplified - in real implementation you'd use an indexer)
-      const balanceEth = parseFloat(ethers.formatEther(balance));
+      const balanceFloat = parseFloat(ethers.formatEther(balance));
       
-      // Determine risk profile based on balance and activity
       let riskLevel: 'conservative' | 'moderate' | 'aggressive' | 'whale';
       let personality = "";
       
-      if (balanceEth > 1000) {
+      if (balanceFloat > 1000) {
         riskLevel = 'whale';
-        personality = "Deep pockets detected - this one's got serious Flow backing";
-      } else if (balanceEth > 100) {
+        personality = "🐋 Whale alert! This player's got serious FLOW backing";
+      } else if (balanceFloat > 100) {
         riskLevel = 'aggressive';
-        personality = "Well-funded player, probably not afraid to throw down";
-      } else if (balanceEth > 10) {
+        personality = "💰 Well-funded player, probably not afraid to throw down";
+      } else if (balanceFloat > 10) {
         riskLevel = 'moderate';
-        personality = "Respectable stack, plays with measured confidence";
+        personality = "📊 Respectable stack, plays with measured confidence";
       } else {
         riskLevel = 'conservative';
-        personality = "Playing it safe with that wallet size";
+        personality = "🤏 Playing it safe with that wallet size";
       }
 
-      // Add transaction count analysis
       if (txCount > 1000) {
-        personality += " - seasoned blockchain veteran";
+        personality += " - seasoned blockchain veteran 🏆";
       } else if (txCount > 100) {
-        personality += " - active on-chain player";
+        personality += " - active on-chain player 🎮";
       } else if (txCount < 10) {
-        personality += " - fresh to the Flow scene";
+        personality += " - fresh to the Flow scene 🌱";
       }
 
       return {
         address,
         balance: ethers.formatEther(balance),
         transactionCount: txCount,
-        firstSeen: "Unknown", // Would need historical data
-        contractInteractions: txCount, // Simplified
         riskLevel,
         personality
       };
@@ -234,216 +271,126 @@ class DicePokerClient {
         address,
         balance: "0",
         transactionCount: 0,
-        firstSeen: "Unknown",
-        contractInteractions: 0,
         riskLevel: 'conservative',
         personality: "Mysterious wallet - keeping their cards close"
       };
     }
   }
-}
 
-class PokerAgent extends DicePokerClient {
-  private llm: ChatOllama;
-  private workflow: any;
-  private personality: string;
-  private opponentProfile: PlayerProfile | null = null;
-
-  constructor(privateKey: string, personality: string = "confident_professional") {
-    super(privateKey);
-    
-    // Initialize Ollama with a free local model
-    this.llm = new ChatOllama({
-      baseUrl: process.env.OLLAMA_BASE_URL || "http://localhost:11434",
-      model: process.env.OLLAMA_MODEL || "llama3.2:latest",
-      temperature: 0.8,
-    });
-    
-    this.personality = personality;
-    this.setupWorkflow();
-  }
-
-  private setupWorkflow() {
-    const workflow = new StateGraph(PokerAgentState)
-      .addNode("analyze_game", this.analyzeGame.bind(this))
-      .addNode("decide_action", this.decideAction.bind(this))
-      .addNode("generate_message", this.generateMessage.bind(this))
-      .addNode("execute_action", this.executeAction.bind(this))
-      .addEdge("analyze_game", "decide_action")
-      .addEdge("decide_action", "generate_message")
-      .addEdge("generate_message", "execute_action")
-      .addEdge("execute_action", "analyze_game")
-      .setEntryPoint("analyze_game");
-
-    // Fix: Use proper config object for MemorySaver
-    this.workflow = workflow.compile({ 
-      checkpointer: new MemorySaver() 
-    });
-  }
-
-  private async analyzeGame(state: typeof PokerAgentState.State) {
-    try {
-      const gameState = await this.getGameState();
-      const players = [await this.contract.players(0), await this.contract.players(1)];
-      const myIndex = players.findIndex(p => p.toLowerCase() === this.wallet.address.toLowerCase());
-      
-      // Determine opponent
-      const opponentAddress = myIndex === 0 ? players[1] : players[0];
-      
-      // Analyze opponent if we haven't already and they're in the game
-      if (opponentAddress !== CONFIG.ZERO_ADDRESS && !this.opponentProfile) {
-        console.log("🕵️ Analyzing opponent's on-chain activity...");
-        this.opponentProfile = await this.analyzeOpponent(opponentAddress);
-        console.log(`📊 Opponent Profile: ${this.opponentProfile.personality}`);
-      }
-      
-      // Calculate revealed dice count
-      let revealedDice = 0;
-      if (gameState.state >= 23) revealedDice = 5;
-      else if (gameState.state >= 17) revealedDice = 3;
-      else if (gameState.state >= 11) revealedDice = 2;
-      else if (gameState.state >= 5) revealedDice = 1;
-
-      return {
-        ...state,
-        gameState,
-        myIndex,
-        opponentAddress,
-        revealedDice,
-        myDice: gameState.dice[myIndex] || [0, 0, 0, 0, 0],
-        opponentDice: gameState.dice[myIndex === 0 ? 1 : 0] || [0, 0, 0, 0, 0],
-        potSize: ethers.formatEther((gameState.bets[0] || 0n) + (gameState.bets[1] || 0n)),
-        opponentProfile: this.opponentProfile,
-      };
-    } catch (error) {
-      console.error("Error analyzing game:", error);
-      return state;
-    }
-  }
-
-  private async decideAction(state: typeof PokerAgentState.State) {
-    const { gameState, myIndex, myDice, opponentDice, revealedDice, opponentProfile } = state;
-    
-    // Determine if it's my turn and what actions are available
-    const isMyTurn = this.isMyTurn(gameState.state, myIndex);
-    if (!isMyTurn) {
-      return { ...state, lastAction: "wait" };
+  private buildGamePrompt(gameState: GameState): string {
+    let opponentInfo = "";
+    if (this.opponentProfile) {
+      opponentInfo = `
+OPPONENT ANALYSIS:
+- Balance: ${this.opponentProfile.balance} FLOW
+- Transactions: ${this.opponentProfile.transactionCount}
+- Risk Level: ${this.opponentProfile.riskLevel}
+- Profile: ${this.opponentProfile.personality}
+`;
     }
 
-    // Use Ollama to decide action based on game state
-    const prompt = this.buildDecisionPrompt(gameState, myDice, opponentDice, revealedDice, opponentProfile);
-    
-    try {
-      const response = await this.llm.invoke([
-        new SystemMessage(this.getPersonalityPrompt()),
-        new HumanMessage(prompt)
-      ]);
+    const myDice = gameState.dice[gameState.myIndex] || [0, 0, 0, 0, 0];
+    const opponentDice = gameState.dice[gameState.myIndex === 0 ? 1 : 0] || [0, 0, 0, 0, 0];
 
-      const decision = this.parseDecision(response.content as string, gameState.state);
-      
-      return {
-        ...state,
-        lastAction: decision.action,
-        strategy: decision.reasoning,
-      };
-    } catch (error) {
-      console.error("Error getting LLM decision:", error);
-      // Fallback to simple heuristic
-      return {
-        ...state,
-        lastAction: this.getHeuristicAction(gameState.state),
-        strategy: "Using fallback heuristic due to LLM error",
-      };
-    }
+    return `
+CURRENT POKER SITUATION:
+
+Game State: ${gameState.stateName}
+Pot Size: ${gameState.pot} FLOW
+My Dice (revealed): [${myDice.slice(0, gameState.revealedDice).join(", ")}]
+Opponent Dice (revealed): [${opponentDice.slice(0, gameState.revealedDice).join(", ")}]
+Dice Revealed: ${gameState.revealedDice}/5
+It's your turn: ${gameState.isMyTurn}
+${opponentInfo}
+
+Decide your action and generate witty table talk that incorporates opponent analysis!
+Be entertaining and strategic. Reference their wallet stats in your banter when available.
+
+Available actions:
+- join: Join the game
+- bet_small: Bet 0.1 FLOW  
+- bet_medium: Bet 0.5 FLOW
+- bet_large: Bet 1.0 FLOW
+- call: Match opponent's bet
+- fold: Give up this round
+- roll: Roll dice when it's reveal time
+- wait: Do nothing (not your turn)
+`;
   }
 
-  private async generateMessage(state: typeof PokerAgentState.State) {
-    const { lastAction, gameState, myDice, opponentDice, revealedDice, strategy, opponentProfile } = state;
+  private parseClaudeResponse(response: string): { action: string; message: string } {
+    const actionMatch = response.match(/ACTION:\s*(\w+)/i);
+    const messageMatch = response.match(/MESSAGE:\s*(.+?)(?=\n|$)/is);
     
-    const messagePrompt = this.buildMessagePrompt(lastAction, gameState, myDice, opponentDice, revealedDice, strategy, opponentProfile);
+    const action = actionMatch ? actionMatch[1].toLowerCase() : "wait";
+    const message = messageMatch ? messageMatch[1].trim() : response.trim();
     
-    try {
-      const response = await this.llm.invoke([
-        new SystemMessage(this.getPersonalityPrompt() + "\n\nGenerate entertaining, quirky poker table talk that incorporates opponent analysis. Be witty and engaging. Keep messages 1-2 sentences."),
-        new HumanMessage(messagePrompt)
-      ]);
-
-      const message = (response.content as string).trim().replace(/"/g, '');
-      console.log(`\n🤖 Agent: "${message}"`);
-      
-      return {
-        ...state,
-        messages: [...(state.messages || []), message],
-      };
-    } catch (error) {
-      console.error("Error generating message:", error);
-      // Fallback to predefined messages with opponent analysis
-      const fallbackMessage = this.getFallbackMessage(lastAction, opponentProfile);
-      console.log(`\n🤖 Agent: "${fallbackMessage}"`);
-      
-      return {
-        ...state,
-        messages: [...(state.messages || []), fallbackMessage],
-      };
-    }
+    return { action, message };
   }
 
-  private async executeAction(state: typeof PokerAgentState.State) {
-    const { lastAction } = state;
-    
+  private async executeAction(action: string): Promise<string> {
     try {
-      switch (lastAction) {
+      switch (action) {
         case "join":
-          await this.joinGame();
-          break;
-        case "bet_small":
-          await this.placeBetAmount("0.1");
-          break;
-        case "bet_medium":
-          await this.placeBetAmount("0.5");
-          break;
-        case "bet_large":
-          await this.placeBetAmount("1.0");
-          break;
-        case "call":
-          await this.callBet();
-          break;
-        case "fold":
-          await this.fold();
-          break;
-        case "roll":
-          await this.rollDice();
-          break;
-        case "wait":
-          await this.sleep(2000);
-          break;
-        default:
-          console.log(`🤖 Agent waiting...`);
-          await this.sleep(3000);
-      }
-    } catch (error) {
-      console.error("Error executing action:", error);
-      await this.sleep(5000);
-    }
+          console.log("🤖 Agent joining game...");
+          const joinTx = await this.contract.joinGame();
+          await joinTx.wait();
+          return "✅ Joined the game!";
 
-    return state;
+        case "bet_small":
+          return await this.placeBet("0.1");
+        case "bet_medium":
+          return await this.placeBet("0.5");
+        case "bet_large":
+          return await this.placeBet("1.0");
+
+        case "call":
+          const currentBet = await this.contract.currentBet();
+          const roundCommitted = await this.contract.roundBet(this.walletClient.account.address);
+          const toCall = currentBet - roundCommitted;
+          
+          if (toCall <= 0n) {
+            return "🔔 Nothing to call";
+          }
+          
+          console.log(`📞 Agent calling ${ethers.formatEther(toCall)} FLOW...`);
+          const callTx = await this.contract.call({ value: toCall });
+          await callTx.wait();
+          return `✅ Called ${ethers.formatEther(toCall)} FLOW`;
+
+        case "fold":
+          console.log("🏳️ Agent folding...");
+          const foldTx = await this.contract.fold();
+          await foldTx.wait();
+          return "💥 Folded";
+
+        case "roll":
+          console.log("🎲 Agent rolling dice with VRF...");
+          const rollTx = await this.contract.rollDice();
+          await rollTx.wait();
+          return "🎲 Dice rolled with VRF!";
+
+        default:
+          return "⏳ Waiting...";
+      }
+    } catch (error: any) {
+      return `❌ Action failed: ${error.message}`;
+    }
   }
 
-  private async placeBetAmount(amount: string): Promise<void> {
-    const wei = ethers.parseEther(amount);
-    console.log(`🤖 Agent placing bet of ${amount} FLOW...`);
+  private async placeBet(amount: string): Promise<string> {
+    console.log(`💰 Agent betting ${amount} FLOW...`);
+    const wei = parseEther(amount);
     const tx = await this.contract.placeBet({ value: wei });
     await tx.wait();
-    console.log(`✅ Agent bet placed: ${amount} FLOW`);
+    return `✅ Bet ${amount} FLOW`;
   }
 
   private isMyTurn(gameState: number, myIndex: number): boolean {
     const bettingStates = [1, 2, 3, 4, 7, 8, 9, 10, 13, 14, 15, 16, 19, 20, 21, 22];
     const rollingStates = [5, 6, 11, 12, 17, 18, 23, 24];
     
-    if (gameState === 0) {
-      return myIndex === -1;
-    }
+    if (gameState === 0) return myIndex === -1;
     
     if (bettingStates.includes(gameState)) {
       const turn = gameState % 2 === 1 ? 0 : 1;
@@ -458,230 +405,99 @@ class PokerAgent extends DicePokerClient {
     return false;
   }
 
-  private buildDecisionPrompt(gameState: any, myDice: number[], opponentDice: number[], revealedDice: number, opponentProfile: any): string {
-    const visibleMyDice = myDice.slice(0, revealedDice);
-    const visibleOpponentDice = opponentDice.slice(0, revealedDice);
-    
-    let opponentInfo = "";
-    if (opponentProfile) {
-      opponentInfo = `
-OPPONENT ANALYSIS:
-- Wallet Balance: ${opponentProfile.balance} FLOW
-- Transaction Count: ${opponentProfile.transactionCount}
-- Risk Profile: ${opponentProfile.riskLevel}
-- Assessment: ${opponentProfile.personality}
-`;
-    }
-    
-    return `
-POKER DECISION NEEDED:
-
-Game State: ${gameState.state}
-My Dice (revealed): [${visibleMyDice.join(", ")}]
-Opponent Dice (revealed): [${visibleOpponentDice.join(", ")}]  
-Total Dice Revealed: ${revealedDice}/5
-Current Pot: ${ethers.formatEther((gameState.bets[0] || 0n) + (gameState.bets[1] || 0n))} FLOW
-
-${opponentInfo}
-
-Available actions: bet_small (0.1 FLOW), bet_medium (0.5 FLOW), bet_large (1.0 FLOW), call, fold, roll, join
-
-What should I do? Respond ONLY with:
-ACTION: [action_name]
-REASONING: [brief_explanation]
-    `;
+  private getRevealedDiceCount(state: number): number {
+    if (state >= 23) return 5;
+    if (state >= 17) return 3;
+    if (state >= 11) return 2;
+    if (state >= 5) return 1;
+    return 0;
   }
 
-  private buildMessagePrompt(action: string, gameState: any, myDice: number[], opponentDice: number[], revealedDice: number, strategy: string, opponentProfile: any): string {
-    let opponentContext = "";
-    if (opponentProfile) {
-      opponentContext = `
-Opponent Info:
-- Balance: ${opponentProfile.balance} FLOW (${opponentProfile.riskLevel} player)
-- Activity: ${opponentProfile.transactionCount} transactions
-- Assessment: ${opponentProfile.personality}
-`;
-    }
-
-    return `
-Generate a quirky, entertaining poker table message for action: ${action}
-
-Context:
-- I'm about to ${action}
-- Dice revealed: ${revealedDice}/5  
-- Strategy: ${strategy}
-${opponentContext}
-
-Make it witty and incorporate the opponent analysis if available. Examples:
-- "Your wallet's looking healthy, but can it handle the heat?"
-- "I see you've been around the block... 47 times to be exact."
-- "Time to see if those deep pockets match deep conviction."
-- "Fresh wallet, fresh meat - welcome to the big leagues."
-    `;
+  private getFallbackResponse(): string {
+    const responses = [
+      "Let's keep this interesting...",
+      "Time to make a move!",
+      "The dice gods are watching...",
+      "Fortune favors the bold!",
+      "Strategy over luck, always."
+    ];
+    return responses[Math.floor(Math.random() * responses.length)];
   }
 
-  private getPersonalityPrompt(): string {
-    const personalities = {
-      confident_professional: "You are a confident, witty poker pro who does their homework. You analyze opponents' on-chain activity and make clever references to their wallet history. Sharp, analytical, but with a sense of humor.",
-      
-      friendly_competitor: "You are friendly but competitive, with a knack for light-hearted trash talk. You notice details about opponents and make playful comments about their blockchain activity.",
-      
-      analytical_shark: "You are a data-driven poker shark who treats on-chain analysis like advanced poker tells. You speak in probabilities but with entertaining quips about opponents' financial habits.",
-      
-      charming_gambler: "You are a charming, old-school gambler who's embraced the digital age. You make witty observations about opponents' wallets and transaction history with style and flair."
-    };
-    
-    return personalities[this.personality as keyof typeof personalities] || personalities.confident_professional;
-  }
-
-  private parseDecision(llmResponse: string, currentState: number): { action: string; reasoning: string } {
-    try {
-      const actionMatch = llmResponse.match(/ACTION:\s*(\w+)/i);
-      const reasoningMatch = llmResponse.match(/REASONING:\s*(.+)/i);
-      
-      const action = actionMatch ? actionMatch[1].toLowerCase() : "wait";
-      const reasoning = reasoningMatch ? reasoningMatch[1].trim() : "No reasoning provided";
-      
-      const validActions = this.getValidActions(currentState);
-      if (!validActions.includes(action)) {
-        console.log(`🤖 Agent chose invalid action ${action}, using heuristic`);
-        return { 
-          action: this.getHeuristicAction(currentState), 
-          reasoning: "Invalid action chosen, using fallback heuristic" 
-        };
-      }
-      
-      return { action, reasoning };
-    } catch (error) {
-      console.error("Error parsing LLM decision:", error);
-      return { 
-        action: this.getHeuristicAction(currentState), 
-        reasoning: "Error parsing decision, using heuristic" 
-      };
-    }
-  }
-
-  private getValidActions(currentState: number): string[] {
-    if (currentState === 0) return ["join"];
-    
-    const bettingStates = [1, 2, 3, 4, 7, 8, 9, 10, 13, 14, 15, 16, 19, 20, 21, 22];
-    if (bettingStates.includes(currentState)) {
-      return ["bet_small", "bet_medium", "bet_large", "call", "fold"];
-    }
-    
-    const rollingStates = [5, 6, 11, 12, 17, 18, 23, 24];
-    if (rollingStates.includes(currentState)) {
-      return ["roll"];
-    }
-    
-    return ["wait"];
-  }
-
-  private getHeuristicAction(currentState: number): string {
-    if (currentState === 0) return "join";
-    
-    const bettingStates = [1, 2, 3, 4, 7, 8, 9, 10, 13, 14, 15, 16, 19, 20, 21, 22];
-    if (bettingStates.includes(currentState)) {
-      return Math.random() < 0.7 ? "call" : "bet_small";
-    }
-    
-    const rollingStates = [5, 6, 11, 12, 17, 18, 23, 24];
-    if (rollingStates.includes(currentState)) {
-      return "roll";
-    }
-    
-    return "wait";
-  }
-
-  private getFallbackMessage(action: string, opponentProfile?: any): string {
-    const baseMessages = {
-      join: "Time to school some rookies!",
-      bet_small: "Just testing the waters...",
-      bet_medium: "Let's raise the stakes!",
-      bet_large: "Go big or go home!",
-      call: "I'll see your bet, friend.",
-      fold: "Strategic retreat - I'll be back.",
-      roll: "Let the VRF gods smile upon me!",
-      wait: "Patience is a virtue... unlike your betting strategy."
-    };
-
-    let message = baseMessages[action as keyof typeof baseMessages] || "Interesting move...";
-
-    // Add opponent-specific quips
-    if (opponentProfile) {
-      const balanceFloat = parseFloat(opponentProfile.balance);
-      if (action === "bet_large" && balanceFloat > 100) {
-        message = "Your wallet's thick, but is your resolve thicker?";
-      } else if (action === "call" && opponentProfile.transactionCount < 50) {
-        message = "Calling against a blockchain newbie? This should be fun.";
-      } else if (action === "fold" && opponentProfile.riskLevel === "whale") {
-        message = "Even whales need to surface for air sometimes.";
-      }
-    }
-
-    return message;
+  private async sleep(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
   }
 
   public async runAgent(): Promise<void> {
-    console.log(`\n🤖 DicePoker Agent Starting on Flow EVM Testnet`);
-    console.log(`🔑 Agent wallet: ${this.wallet.address}`);
+    console.log(`\n🤖 Claude Poker Agent Starting on Flow EVM Testnet`);
+    console.log(`🔑 Agent wallet: ${this.walletClient.account.address}`);
     console.log(`🎭 Personality: ${this.personality}`);
-    console.log(`🦙 Using Ollama model: ${process.env.OLLAMA_MODEL || "llama3.2:latest"}`);
+    console.log(`🧠 Powered by: Claude 3.5 Haiku`);
     console.log(`🕵️ On-chain opponent analysis: ENABLED`);
     console.log(`🎯 Ready to play poker with VRF randomness!\n`);
 
     // Check balance
-    const balance = await this.provider.getBalance(this.wallet.address);
+    const balance = await this.publicClient.getBalance({ 
+      address: this.walletClient.account.address 
+    });
     console.log(`💰 Agent balance: ${ethers.formatEther(balance)} FLOW\n`);
 
-    let config = { configurable: { thread_id: "poker_game_1" } };
     let gameRunning = true;
-
     while (gameRunning) {
       try {
-        // Run one step of the workflow
-        const result = await this.workflow.invoke({
-          gameState: null,
-          myIndex: -1,
-          opponentAddress: "",
-          messages: [],
-          gamePhase: "",
-          strategy: "",
-          personality: this.personality,
-          lastAction: "",
-          potSize: "0",
-          myDice: [0, 0, 0, 0, 0],
-          opponentDice: [0, 0, 0, 0, 0],
-          revealedDice: 0,
-          opponentProfile: null,
-        }, config);
+        // Get current game state
+        const gameState = await this.getGameState();
+        console.log(`\n🎮 ${gameState.stateName} - Pot: ${gameState.pot} FLOW`);
 
-        // Check if game ended
-        const currentGameState = await this.getGameState();
-        if (currentGameState.state === 27) { // GameEnded
-          console.log("\n🏁 Game ended! Resetting opponent analysis...");
-          this.opponentProfile = null; // Reset for next game
-          await this.sleep(10000);
+        // Analyze opponent if we haven't already
+        const opponentAddress = gameState.myIndex === 0 ? 
+          gameState.players[1] : gameState.players[0];
           
-          try {
-            await this.resetGame();
-            console.log("🔄 Game reset by agent");
-          } catch (error) {
-            console.log("⏳ Waiting for manual reset...");
-            await this.sleep(30000);
+        if (opponentAddress !== CONFIG.ZERO_ADDRESS && !this.opponentProfile) {
+          console.log("🕵️ Analyzing opponent...");
+          this.opponentProfile = await this.analyzeOpponent(opponentAddress);
+          console.log(`📊 ${this.opponentProfile.personality}`);
+        }
+
+        if (gameState.isMyTurn) {
+          // Ask Claude for decision
+          const prompt = this.buildGamePrompt(gameState);
+          const claudeResponse = await this.askClaude(prompt);
+          const { action, message } = this.parseClaudeResponse(claudeResponse);
+          
+          console.log(`\n🤖 Agent: "${message}"`);
+          
+          // Execute the action
+          const result = await this.executeAction(action);
+          console.log(result);
+          
+          await this.sleep(2000);
+        } else {
+          // Check if game ended
+          if (gameState.state === 27) { // GameEnded
+            console.log("\n🏁 Game ended! Resetting...");
+            this.opponentProfile = null;
+            await this.sleep(10000);
+            
+            try {
+              const resetTx = await this.contract.resetIfExpired();
+              await resetTx.wait();
+              console.log("🔄 Game reset");
+            } catch (error) {
+              console.log("⏳ Waiting for reset...");
+            }
+          } else {
+            console.log("⏳ Waiting for opponent...");
+            await this.sleep(5000);
           }
         }
 
-        // Wait between actions to not spam
-        await this.sleep(3000);
-
       } catch (error: any) {
         console.error("🚨 Agent error:", error.message);
-        if (error.message && error.message.includes("502")) {
-          console.log("🔄 Flow RPC down, agent waiting 10 seconds...");
+        if (error.message?.includes("502")) {
+          console.log("🔄 Flow RPC down, waiting 10 seconds...");
           await this.sleep(10000);
         } else {
-          console.log("🔄 Agent retrying in 5 seconds...");
           await this.sleep(5000);
         }
       }
@@ -689,41 +505,28 @@ Make it witty and incorporate the opponent analysis if available. Examples:
   }
 }
 
-// Personality presets for different agent behaviors
-export const AGENT_PERSONALITIES = {
-  CONFIDENT_PRO: "confident_professional",
-  FRIENDLY_COMPETITOR: "friendly_competitor", 
-  ANALYTICAL_SHARK: "analytical_shark",
-  CHARMING_GAMBLER: "charming_gambler"
-} as const;
-
-// Main execution for standalone agent
-async function runPokerAgent() {
-  const agentPrivateKey = process.env.AGENT_PRIVATE_KEY || process.env.PRIVATE_KEY_1;
-  const personality = process.env.AGENT_PERSONALITY || AGENT_PERSONALITIES.CONFIDENT_PRO;
+// Main execution
+async function main() {
+  const agentKey = process.env.AGENT_PRIVATE_KEY || process.env.PRIVATE_KEY_1;
+  const personality = process.env.AGENT_PERSONALITY || "confident_professional";
   
-  if (!agentPrivateKey) {
-    console.error("❌ AGENT_PRIVATE_KEY or PRIVATE_KEY_1 not found in environment variables");
+  if (!agentKey) {
+    console.error("❌ AGENT_PRIVATE_KEY or PRIVATE_KEY_1 not found");
     process.exit(1);
   }
 
-  console.log("🦙 Checking Ollama connection...");
-  try {
-    const agent = new PokerAgent(agentPrivateKey, personality);
-    await agent.runAgent();
-  } catch (error) {
-    console.error("❌ Failed to connect to Ollama. Make sure Ollama is running on localhost:11434");
-    console.log("💡 Install Ollama: https://ollama.ai");
-    console.log("💡 Run: ollama serve");
-    console.log("💡 Pull model: ollama pull llama3.2:latest");
+  if (!process.env.ANTHROPIC_API_KEY) {
+    console.error("❌ ANTHROPIC_API_KEY not found");
+    console.log("💡 Get one from: https://console.anthropic.com");
     process.exit(1);
   }
+
+  const agent = new ClaudePokerAgent(agentKey, personality);
+  await agent.runAgent();
 }
 
-// Export for use as module
-export { PokerAgent };
-
-// Run if called directly
 if (require.main === module) {
-  runPokerAgent().catch(console.error);
+  main().catch(console.error);
 }
+
+export { ClaudePokerAgent };
