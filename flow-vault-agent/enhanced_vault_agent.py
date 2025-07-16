@@ -3,11 +3,8 @@ import json
 import time
 from dotenv import load_dotenv
 from web3 import Web3
-# test b4 docs check
-try:
-    from web3.middleware import geth_poa_middleware
-except ImportError:
-    from web3.middleware.geth_poa import geth_poa_middleware
+# Fixed import for Web3.py v6+
+import web3.middleware
 from web3.exceptions import ContractLogicError
 from fastapi import FastAPI
 from pydantic import BaseModel
@@ -27,6 +24,15 @@ except ImportError as e:
     print(f"⚠️ Risk model not available: {e}")
     print("Run: cd ml-risk && python anomaly_risk_model.py")
     RISK_MODEL_AVAILABLE = False
+
+# Import Ollama LLM planner
+try:
+    from ollama_llm_planner import ai_strategy_advisor
+    OLLAMA_AVAILABLE = True
+    print("✅ Ollama LLM planner imported successfully")
+except ImportError as e:
+    print(f"⚠️ Ollama LLM planner not available: {e}")
+    OLLAMA_AVAILABLE = False
 
 # ==============================================================================
 # 1. ENHANCED CONFIGURATION AND SETUP
@@ -56,9 +62,16 @@ FLOW_STRATEGIES = {
     "flowswap": os.getenv("FLOWSWAP_STRATEGY_ADDRESS", "")
 }
 
-# --- Web3 Setup ---
+# --- Web3 Setup (Fixed for v6+) ---
 w3 = Web3(Web3.HTTPProvider(RPC_URL))
-w3.middleware_onion.inject(geth_poa_middleware, layer=0)
+# Fixed middleware injection for Web3.py v6+
+try:
+    from web3.middleware import geth_poa_middleware
+    w3.middleware_onion.inject(geth_poa_middleware, layer=0)
+    print("✅ PoA middleware injected")
+except (ImportError, AttributeError):
+    print("⚠️ PoA middleware not available, continuing without it")
+    print("   This is often fine for Flow testnet")
 
 # --- Agent Account Setup ---
 agent_account = w3.eth.account.from_key(AGENT_PRIVATE_KEY)
@@ -75,15 +88,44 @@ if RISK_MODEL_AVAILABLE:
 else:
     risk_api = None
 
-# --- Load ABIs ---
+# --- Load ABIs (Fixed path resolution) ---
 def load_abi(filename):
-    path = os.path.join("abi", filename)
-    with open(path, "r") as f:
-        return json.load(f)["abi"]
+    """Loads a contract ABI from the abi directory with robust path handling."""
+    # Try multiple possible paths
+    possible_paths = [
+        os.path.join("abi", filename),           # Current directory
+        os.path.join("..", "abi", filename),     # Parent directory  
+        os.path.join("../abi", filename),        # Alternative parent
+        filename  # Just the filename in current dir
+    ]
+    
+    for path in possible_paths:
+        try:
+            if os.path.exists(path):
+                with open(path, "r") as f:
+                    abi_data = json.load(f)
+                    # Handle both {"abi": [...]} and direct [...] formats
+                    if isinstance(abi_data, dict) and "abi" in abi_data:
+                        return abi_data["abi"]
+                    elif isinstance(abi_data, list):
+                        return abi_data
+                    else:
+                        raise ValueError(f"Invalid ABI format in {filename}")
+        except (FileNotFoundError, KeyError, json.JSONDecodeError):
+            continue
+    
+    # If none found, raise error with helpful message
+    raise FileNotFoundError(f"Could not find {filename} in any of these locations: {possible_paths}")
 
-vault_abi = load_abi("Vault.json")
-vrf_strategy_abi = load_abi("FlowVrfYieldStrategy.json")
-usdc_abi = load_abi("MockUSDC.json")
+try:
+    vault_abi = load_abi("Vault.json")
+    vrf_strategy_abi = load_abi("FlowVrfYieldStrategy.json")
+    usdc_abi = load_abi("MockUSDC.json")
+    print("✅ All ABI files loaded successfully")
+except FileNotFoundError as e:
+    print(f"❌ ABI loading failed: {e}")
+    print("Please ensure ABI files are in the correct directory")
+    exit(1)
 
 # --- Create Contract Objects ---
 vault_contract = w3.eth.contract(address=VAULT_ADDRESS, abi=vault_abi)
@@ -150,7 +192,9 @@ def get_enhanced_protocol_status() -> str:
             "total_deployed": f"{prize_pool:.2f} USDC",
             "agent_address": agent_account.address,
             "vault_address": VAULT_ADDRESS,
-            "vrf_strategy_address": VRF_STRATEGY_ADDRESS
+            "vrf_strategy_address": VRF_STRATEGY_ADDRESS,
+            "risk_model_available": RISK_MODEL_AVAILABLE,
+            "ollama_available": OLLAMA_AVAILABLE
         }
         
         return f"Enhanced Protocol Status: {json.dumps(status_report, indent=2)}"
@@ -519,6 +563,7 @@ def trigger_lottery_draw() -> str:
 # 4. ENHANCED LANGCHAIN AGENT
 # ==============================================================================
 
+# Build tools list dynamically based on availability
 tools = [
     get_enhanced_protocol_status,
     assess_strategy_risk,
@@ -531,6 +576,11 @@ tools = [
     get_protocol_status,
     deposit_new_funds_into_strategy
 ]
+
+# Add Ollama AI tool if available
+if OLLAMA_AVAILABLE:
+    tools.append(ai_strategy_advisor)
+    print("✅ AI strategy advisor tool added")
 
 tool_names = [t.name for t in tools]
 
@@ -546,6 +596,7 @@ ENHANCED CAPABILITIES:
 🔍 Multi-Strategy Analysis: Compare yield opportunities across protocols
 🚨 Emergency Monitoring: Detect and respond to risk events
 📊 Comprehensive Reporting: Detailed status and metrics
+🤖 AI Strategy Advisor: Local LLM for intelligent recommendations (if available)
 
 You have access to these enhanced tools:
 {tools}
@@ -553,10 +604,11 @@ You have access to these enhanced tools:
 OPERATIONAL PROCEDURE (Enhanced):
 1. **Enhanced Assessment**: Use get_enhanced_protocol_status() for comprehensive overview
 2. **Risk Evaluation**: Use assess_strategy_risk() and test_vrf_strategy_risk() to understand safety
-3. **Strategic Deployment**: Use deploy_to_strategy_with_risk_check() for safe fund allocation
-4. **Emergency Protocols**: Run emergency_risk_assessment() if you detect anomalies
-5. **Yield Optimization**: Balance prize rewards with risk management
-6. **Lottery Execution**: Only trigger draws after confirming adequate prize pools and safety
+3. **AI Strategy Planning**: Use ai_strategy_advisor() for intelligent recommendations (if available)
+4. **Strategic Deployment**: Use deploy_to_strategy_with_risk_check() for safe fund allocation
+5. **Emergency Protocols**: Run emergency_risk_assessment() if you detect anomalies
+6. **Yield Optimization**: Balance prize rewards with risk management
+7. **Lottery Execution**: Only trigger draws after confirming adequate prize pools and safety
 
 Use the following format:
 Question: the user's request or task
@@ -575,6 +627,7 @@ RISK MANAGEMENT RULES:
 - Monitor for unusual patterns or high-risk activities
 - Prioritize user fund safety over yield maximization
 - Run emergency assessment if risk indicators spike
+- Use AI advisor for complex strategic decisions when available
 
 FLOW TESTNET NOTES:
 - You operate on Flow testnet with VRF-powered lottery
@@ -608,8 +661,8 @@ agent_executor = AgentExecutor(
 
 app = FastAPI(
     title="Enhanced Flow Vault Manager Agent",
-    description="AI agent with risk management for Flow prize savings protocol",
-    version="2.0.0"
+    description="AI agent with risk management and local LLM support for Flow prize savings protocol",
+    version="2.1.0"
 )
 
 class AgentRequest(BaseModel):
@@ -620,7 +673,7 @@ class RiskAssessmentRequest(BaseModel):
 
 @app.post("/invoke-agent")
 async def invoke_agent(request: AgentRequest):
-    """Enhanced agent endpoint with risk management."""
+    """Enhanced agent endpoint with risk management and AI strategy advisor."""
     try:
         tool_descriptions = "\n".join([f"{tool.name}: {tool.description}" for tool in tools])
         
@@ -658,7 +711,8 @@ async def emergency_status():
 async def enhanced_status():
     """Enhanced protocol status endpoint."""
     try:
-        result = get_enhanced_protocol_status()
+        # Call the tool function directly
+        result = get_enhanced_protocol_status.invoke({})
         return {"success": True, "status": result}
     except Exception as e:
         return {"success": False, "error": str(e)}
@@ -672,37 +726,120 @@ async def test_vrf_risk():
     except Exception as e:
         return {"success": False, "error": str(e)}
 
+@app.post("/ai-strategy")
+async def ai_strategy_endpoint(request: AgentRequest):
+    """AI strategy advisor endpoint (if Ollama is available)."""
+    try:
+        if not OLLAMA_AVAILABLE:
+            return {
+                "success": False, 
+                "error": "Ollama AI not available. Install Ollama and create ollama_llm_planner.py"
+            }
+        
+        result = ai_strategy_advisor(request.command)
+        return {"success": True, "ai_strategy": result}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
 @app.get("/")
 def read_root():
     return {
         "message": "Enhanced Flow Vault Manager Agent is running",
-        "version": "2.0.0",
+        "version": "2.1.0",
         "vault_address": VAULT_ADDRESS,
         "vrf_strategy_address": VRF_STRATEGY_ADDRESS,
         "usdc_token_address": USDC_TOKEN_ADDRESS,
         "agent_address": agent_account.address,
         "risk_model_available": RISK_MODEL_AVAILABLE,
+        "ollama_ai_available": OLLAMA_AVAILABLE,
         "features": [
             "Risk Assessment",
             "VRF Lottery Management", 
             "Emergency Monitoring",
-            "Enhanced Status Reporting"
+            "Enhanced Status Reporting",
+            "AI Strategy Advisor (Ollama)" if OLLAMA_AVAILABLE else "AI Strategy Advisor (Not Available)"
         ],
         "endpoints": [
             "/invoke-agent",
             "/assess-risk", 
             "/emergency-status",
             "/enhanced-status",
-            "/test-vrf-risk"
+            "/test-vrf-risk",
+            "/ai-strategy" if OLLAMA_AVAILABLE else "/ai-strategy (disabled)"
         ]
     }
+
+@app.get("/health")
+async def health_check():
+    """Comprehensive health check endpoint."""
+    try:
+        # Test Web3 connection
+        latest_block = w3.eth.block_number
+        
+        # Test contract connectivity
+        vault_balance = usdc_contract.functions.balanceOf(VAULT_ADDRESS).call()
+        prize_pool = vrf_strategy_contract.functions.getBalance().call()
+        
+        # Test agent wallet balance
+        agent_balance = w3.eth.get_balance(agent_account.address)
+        
+        health_status = {
+            "status": "healthy",
+            "timestamp": int(time.time()),
+            "web3_connected": True,
+            "latest_block": latest_block,
+            "agent_balance_flow": w3.from_wei(agent_balance, 'ether'),
+            "vault_usdc_balance": vault_balance / 10**6,
+            "prize_pool_usdc": prize_pool / 10**6,
+            "risk_model_loaded": risk_api is not None,
+            "ollama_available": OLLAMA_AVAILABLE,
+            "contracts_accessible": True
+        }
+        
+        return {"success": True, "health": health_status}
+        
+    except Exception as e:
+        return {
+            "success": False, 
+            "health": {
+                "status": "unhealthy",
+                "error": str(e),
+                "timestamp": int(time.time())
+            }
+        }
 
 if __name__ == "__main__":
     import uvicorn
     print("🚀 Starting Enhanced Flow Vault Manager Agent...")
     print(f"🔧 Risk Model Available: {RISK_MODEL_AVAILABLE}")
+    print(f"🤖 Ollama AI Available: {OLLAMA_AVAILABLE}")
     print(f"💰 Agent Address: {agent_account.address}")
     print(f"🏦 Vault Address: {VAULT_ADDRESS}")
     print(f"🎲 VRF Strategy: {VRF_STRATEGY_ADDRESS}")
     print(f"💵 USDC Token: {USDC_TOKEN_ADDRESS}")
+    
+    # Feature summary
+    features = []
+    if RISK_MODEL_AVAILABLE:
+        features.append("✅ ML Risk Assessment")
+    else:
+        features.append("❌ ML Risk Assessment (train model)")
+        
+    if OLLAMA_AVAILABLE:
+        features.append("✅ Local AI Strategy Advisor")
+    else:
+        features.append("❌ Local AI Strategy Advisor (setup Ollama)")
+    
+    features.append("✅ VRF Lottery Management")
+    features.append("✅ Emergency Monitoring")
+    features.append("✅ Enhanced Status Reporting")
+    
+    print("\n📋 Available Features:")
+    for feature in features:
+        print(f"   {feature}")
+    
+    print(f"\n🌐 Starting server on http://localhost:8000")
+    print(f"📚 API docs: http://localhost:8000/docs")
+    print(f"🔍 Health check: http://localhost:8000/health")
+    
     uvicorn.run(app, host="0.0.0.0", port=8000)
