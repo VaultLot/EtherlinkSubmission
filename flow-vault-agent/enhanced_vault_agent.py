@@ -27,11 +27,11 @@ except ImportError as e:
 
 # Import Ollama LLM planner
 try:
-    from ollama_llm_planner import ai_strategy_advisor
+    from ollama_llm_planner import ai_strategy_advisor  # Now uses OpenAI
     OLLAMA_AVAILABLE = True
-    print("✅ Ollama LLM planner imported successfully")
+    print("✅ OpenAI LLM planner imported successfully")
 except ImportError as e:
-    print(f"⚠️ Ollama LLM planner not available: {e}")
+    print(f"⚠️ OpenAI LLM planner not available: {e}")
     OLLAMA_AVAILABLE = False
 
 # ==============================================================================
@@ -139,19 +139,34 @@ print("✅ Enhanced configuration loaded with risk management")
 # ==============================================================================
 
 def send_transaction(tx):
-    """Signs and sends a transaction with enhanced error handling."""
+    """Signs and sends a transaction with Web3.py v6+ compatibility."""
     try:
+        # Sign transaction with proper Web3.py v6+ method
         signed_tx = w3.eth.account.sign_transaction(tx, agent_account.key)
-        tx_hash = w3.eth.send_raw_transaction(signed_tx.rawTransaction)
+        
+        # Handle different Web3.py versions
+        if hasattr(signed_tx, 'rawTransaction'):
+            raw_tx = signed_tx.rawTransaction
+        elif hasattr(signed_tx, 'raw_transaction'):
+            raw_tx = signed_tx.raw_transaction
+        else:
+            # For newer versions, the signed transaction might be the raw transaction itself
+            raw_tx = signed_tx
+        
+        tx_hash = w3.eth.send_raw_transaction(raw_tx)
         print(f"⏳ Transaction sent: {tx_hash.hex()}. Waiting for confirmation...")
         receipt = w3.eth.wait_for_transaction_receipt(tx_hash, timeout=120)
         print(f"✅ Transaction confirmed in block: {receipt.blockNumber}")
         return {"success": True, "receipt": receipt, "tx_hash": tx_hash.hex()}
+        
     except ContractLogicError as e:
         print(f"❌ Transaction reverted: {e}")
         return {"success": False, "error": f"Contract logic error: {e}"}
     except Exception as e:
         print(f"❌ An unexpected error occurred: {e}")
+        # More detailed error for debugging
+        import traceback
+        traceback.print_exc()
         return {"success": False, "error": str(e)}
 
 @tool
@@ -245,25 +260,47 @@ def analyze_yield_opportunities():
     best = max(opportunities.items(), key=lambda x: x[1]["risk_adjusted_apy"])
     return {"best": best[0], "opportunities": opportunities}
 
-@tool 
-def deploy_to_strategy_with_risk_check(strategy_name: str, amount: float) -> str:
+@tool
+def deploy_to_strategy_with_risk_check(strategy_name: str, amount: float = 0.0) -> str:
     """
     Deploy funds to a strategy after comprehensive risk assessment.
+    
+    Args:
+        strategy_name: Name of the strategy ("vrf", "aave", "compound", etc.)
+        amount: Amount of USDC to deploy (0 = use all available)
     """
     print(f"Tool: deploy_to_strategy_with_risk_check - {strategy_name}, {amount} USDC")
     
     try:
+        # Handle string inputs that might contain amounts
+        if isinstance(strategy_name, str):
+            # Extract strategy name if it contains extra text
+            if "flow_increment" in strategy_name.lower():
+                strategy_name = "increment"
+            elif "aave" in strategy_name.lower():
+                strategy_name = "aave"
+            elif "compound" in strategy_name.lower():
+                strategy_name = "compound"
+            elif "vrf" in strategy_name.lower():
+                strategy_name = "vrf"
+        
         # Get strategy address
         strategy_address = None
-        if strategy_name in ETHEREUM_STRATEGIES:
+        if strategy_name in ETHEREUM_STRATEGIES and ETHEREUM_STRATEGIES[strategy_name]:
             strategy_address = ETHEREUM_STRATEGIES[strategy_name]
-        elif strategy_name in FLOW_STRATEGIES:
+        elif strategy_name in FLOW_STRATEGIES and FLOW_STRATEGIES[strategy_name]:
             strategy_address = FLOW_STRATEGIES[strategy_name]
         elif strategy_name == "vrf":
             strategy_address = VRF_STRATEGY_ADDRESS
+        elif strategy_name == "increment":
+            # For now, redirect increment to VRF since increment strategy isn't deployed
+            strategy_address = VRF_STRATEGY_ADDRESS
+            strategy_name = "vrf"
+            print(f"⚠️ Increment strategy not deployed, redirecting to VRF lottery")
         
         if not strategy_address:
-            return f"Unknown strategy: {strategy_name}. Available: vrf, {list(ETHEREUM_STRATEGIES.keys())}, {list(FLOW_STRATEGIES.keys())}"
+            available_strategies = ["vrf"] + [k for k, v in ETHEREUM_STRATEGIES.items() if v] + [k for k, v in FLOW_STRATEGIES.items() if v]
+            return f"❌ Unknown strategy: {strategy_name}. Available: {available_strategies}"
         
         # Risk assessment (skip for VRF since it's on Flow testnet)
         if risk_api and strategy_address != VRF_STRATEGY_ADDRESS:
@@ -280,17 +317,24 @@ def deploy_to_strategy_with_risk_check(strategy_name: str, amount: float) -> str
         liquid_usdc_wei = usdc_contract.functions.balanceOf(VAULT_ADDRESS).call()
         liquid_usdc = liquid_usdc_wei / (10**6)
         
-        # If amount is 0, use all available funds
+        # If amount is 0, use reasonable amount for strategy
         if amount == 0:
-            amount = liquid_usdc
+            if strategy_name == "vrf":
+                amount = min(150.0, liquid_usdc * 0.5)  # Use 150 USDC or 50% of liquid, whichever is smaller
+            else:
+                amount = liquid_usdc * 0.8  # Use 80% for other strategies
         
         if amount > liquid_usdc:
-            return f"Insufficient funds: {liquid_usdc:.2f} USDC available, {amount:.2f} USDC requested"
+            return f"❌ Insufficient funds: {liquid_usdc:.2f} USDC available, {amount:.2f} USDC requested"
         
-        if amount == 0:
-            return "No funds available to deploy"
+        if amount <= 0:
+            return "❌ No funds available to deploy"
         
-        # Execute deployment
+        # For VRF strategy, we need to use simulate_yield_harvest_and_deposit instead
+        if strategy_name == "vrf" or strategy_address == VRF_STRATEGY_ADDRESS:
+            return simulate_yield_harvest_and_deposit.invoke({"amount_usdc": amount})
+        
+        # Execute deployment for other strategies
         amount_wei = int(amount * (10**6))
         
         tx = vault_contract.functions.depositToStrategy(
@@ -313,7 +357,7 @@ def deploy_to_strategy_with_risk_check(strategy_name: str, amount: float) -> str
             return f"❌ Deployment failed: {result['error']}"
             
     except Exception as e:
-        return f"Error in risk-checked deployment: {e}"
+        return f"❌ Error in risk-checked deployment: {e}"
 
 @tool
 def emergency_risk_assessment() -> str:
@@ -577,10 +621,7 @@ tools = [
     deposit_new_funds_into_strategy
 ]
 
-# Add Ollama AI tool if available
-if OLLAMA_AVAILABLE:
-    tools.append(ai_strategy_advisor)
-    print("✅ AI strategy advisor tool added")
+
 
 tool_names = [t.name for t in tools]
 
@@ -671,6 +712,10 @@ class AgentRequest(BaseModel):
 class RiskAssessmentRequest(BaseModel):
     strategy_address: str
 
+
+class YieldRequest(BaseModel): 
+    amount_usdc: float
+
 @app.post("/invoke-agent")
 async def invoke_agent(request: AgentRequest):
     """Enhanced agent endpoint with risk management and AI strategy advisor."""
@@ -702,7 +747,7 @@ async def assess_risk(request: RiskAssessmentRequest):
 async def emergency_status():
     """Emergency risk monitoring endpoint."""
     try:
-        result = emergency_risk_assessment()
+        result = emergency_risk_assessment.invoke({})
         return {"success": True, "emergency_assessment": result}
     except Exception as e:
         return {"success": False, "error": str(e)}
@@ -717,26 +762,29 @@ async def enhanced_status():
     except Exception as e:
         return {"success": False, "error": str(e)}
 
+
 @app.get("/test-vrf-risk")
 async def test_vrf_risk():
     """Test VRF strategy risk assessment."""
     try:
-        result = test_vrf_strategy_risk()
+        result = test_vrf_strategy_risk.invoke({})
         return {"success": True, "vrf_risk_test": result}
     except Exception as e:
         return {"success": False, "error": str(e)}
 
+
 @app.post("/ai-strategy")
 async def ai_strategy_endpoint(request: AgentRequest):
-    """AI strategy advisor endpoint (if Ollama is available)."""
+    """AI strategy advisor endpoint (if OpenAI is available)."""
     try:
-        if not OLLAMA_AVAILABLE:
+        if not OLLAMA_AVAILABLE:  # This represents AI availability now
             return {
                 "success": False, 
-                "error": "Ollama AI not available. Install Ollama and create ollama_llm_planner.py"
+                "error": "OpenAI AI not available. Check OPENAI_API_KEY in .env"
             }
         
-        result = ai_strategy_advisor(request.command)
+        # Use invoke instead of direct call
+        result = ai_strategy_advisor.invoke({"current_situation": request.command})
         return {"success": True, "ai_strategy": result}
     except Exception as e:
         return {"success": False, "error": str(e)}
@@ -768,6 +816,25 @@ def read_root():
             "/ai-strategy" if OLLAMA_AVAILABLE else "/ai-strategy (disabled)"
         ]
     }
+
+
+@app.post("/generate-yield")
+async def generate_yield_direct(request: YieldRequest):
+    """Direct yield generation endpoint bypassing agent parameter parsing."""
+    try:
+        result = simulate_yield_harvest_and_deposit.invoke({"amount_usdc": request.amount_usdc})
+        return {"success": True, "yield_result": result}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+@app.post("/trigger-lottery")
+async def trigger_lottery_direct():
+    """Direct lottery trigger endpoint."""
+    try:
+        result = trigger_lottery_draw.invoke({})
+        return {"success": True, "lottery_result": result}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
 
 @app.get("/health")
 async def health_check():

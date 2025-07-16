@@ -1,3 +1,9 @@
+# Replace your ollama_llm_planner.py with this OpenAI-focused version
+
+"""
+Enhanced LLM Planner with OpenAI support for reliable AI strategy recommendations
+"""
+
 import json
 import os
 import requests
@@ -7,153 +13,77 @@ from langchain.tools import tool
 
 load_dotenv()
 
-class OllamaLLMPlanner:
-    """LLM Planner supporting both OpenAI and Ollama (local) models"""
+class OpenAILLMPlanner:
+    """LLM Planner using OpenAI for reliable strategy generation"""
     
     def __init__(self, config: Dict[str, Any]):
-        """Initialize with support for multiple LLM providers"""
+        """Initialize with OpenAI configuration"""
         self.config = config
-        self.provider = config.get('provider', 'ollama')  # Default to ollama
-        self.model = config.get('model', 'llama3.2')
+        self.provider = config.get('provider', 'openai')
+        self.model = config.get('model', 'gpt-4o-mini')
         self.temperature = config.get('temperature', 0.1)
-        self.max_tokens = config.get('max_tokens', 2000)
+        self.max_tokens = config.get('max_tokens', 1500)
         
-        if self.provider == 'openai':
-            self.api_key = os.getenv('OPENAI_API_KEY')
-            if not self.api_key:
-                print("⚠️ OPENAI_API_KEY not found, falling back to Ollama")
-                self.provider = 'ollama'
-        
-        # Ollama configuration
-        self.ollama_host = config.get('ollama_host', 'http://localhost:11434')
+        # OpenAI configuration
+        self.api_key = os.getenv('OPENAI_API_KEY')
+        if not self.api_key:
+            raise ValueError("OPENAI_API_KEY not found in environment variables")
         
         print(f"🤖 LLM Provider: {self.provider}")
         print(f"🧠 Model: {self.model}")
     
     def generate_vault_strategy(self, market_data: Dict[str, Any], vault_status: Dict[str, Any]) -> Dict[str, Any]:
-        """Generate vault management strategy using local LLM"""
+        """Generate vault management strategy using OpenAI"""
         
         prompt = f"""
-You are an expert DeFi vault manager for a Flow blockchain prize savings protocol. 
+You are an expert DeFi vault manager for a Flow blockchain prize savings protocol.
 
 Current Vault Status:
-{json.dumps(vault_status, indent=2)}
+- Liquid USDC: {vault_status.get('liquid_usdc', 0)} USDC
+- Prize Pool: {vault_status.get('prize_pool', 0)} USDC  
+- Last Winner: {vault_status.get('last_winner', 'None')}
+- Situation: {vault_status.get('situation', 'Normal operations')}
 
-Market Data:
-{json.dumps(market_data, indent=2)}
+Market Context:
+- Flow VRF Available: {market_data.get('flow_vrf_available', True)}
+- Risk Model Available: {market_data.get('risk_model_available', True)}
+- Gas Conditions: {market_data.get('gas_price', 'Normal')}
 
-Generate a safe vault management strategy. Focus on:
-1. Prize pool optimization (VRF lottery system)
-2. Risk management and fund safety
-3. Yield opportunities while maintaining security
-4. User fund protection as top priority
+TASK: Generate a safe vault management strategy focusing on:
+1. Prize pool optimization for weekly VRF lottery
+2. User fund safety (top priority) 
+3. Risk management and security
+4. Weekly lottery prize generation
 
-Respond with ONLY a valid JSON object in this exact format:
+Respond with ONLY valid JSON in this exact format:
 {{
     "strategy_type": "vault_management",
-    "primary_action": "optimize_prize_pool|harvest_yield|trigger_lottery|emergency_exit",
-    "risk_level": "low|medium|high", 
+    "primary_action": "optimize_prize_pool",
+    "risk_level": "low",
     "actions": [
         {{
-            "action_type": "simulate_yield_harvest_and_deposit|trigger_lottery_draw|deploy_to_strategy_with_risk_check",
+            "action_type": "simulate_yield_harvest_and_deposit",
             "parameters": {{
                 "amount_usdc": 150.0
             }},
             "priority": 1,
-            "reasoning": "Brief explanation"
+            "reasoning": "Generate weekly lottery prize pool"
         }}
     ],
     "expected_outcome": {{
-        "prize_pool_target": 200.0,
+        "prize_pool_target": 150.0,
         "risk_score": 0.2,
-        "estimated_timeline": "1-7 days"
+        "estimated_timeline": "immediate"
     }},
     "recommendations": [
-        "Brief actionable recommendations"
+        "Create modest weekly prize pool",
+        "Maintain low risk approach",
+        "Focus on VRF lottery system"
     ]
 }}
 """
         
-        if self.provider == 'ollama':
-            return self._generate_with_ollama(prompt)
-        else:
-            return self._generate_with_openai(prompt)
-    
-
-    # Replace the _generate_with_ollama method in ollama_llm_planner.py
-
-def _generate_with_ollama(self, prompt: str) -> Dict[str, Any]:
-    """Generate strategy using local Ollama model with better error handling"""
-    try:
-        # Try the newer Ollama API format first
-        response = requests.post(
-            f"{self.ollama_host}/api/generate",
-            json={
-                "model": self.model,
-                "prompt": prompt,
-                "stream": False,
-                "format": "json",  # Request JSON format
-                "options": {
-                    "temperature": self.temperature,
-                    "num_predict": self.max_tokens,
-                    "stop": ["```", "END"]
-                }
-            },
-            timeout=60
-        )
-        
-        if response.status_code != 200:
-            print(f"⚠️ Ollama API error (status {response.status_code}): {response.text}")
-            return self._fallback_strategy()
-        
-        result = response.json()
-        content = result.get('response', '')
-        
-        print(f"🤖 Ollama Response: {content[:200]}...")
-        
-        # Extract JSON from response
-        strategy = self._extract_json_from_response(content)
-        
-        if not strategy:
-            print("⚠️ Could not parse Ollama response as JSON, using fallback")
-            return self._fallback_strategy()
-        
-        return strategy
-        
-    except requests.exceptions.Timeout:
-        print("⚠️ Ollama request timed out, using fallback")
-        return self._fallback_strategy()
-    except requests.exceptions.ConnectionError:
-        print("⚠️ Could not connect to Ollama, using fallback")
-        return self._fallback_strategy()
-    except Exception as e:
-        print(f"⚠️ Ollama generation failed: {e}")
-        return self._fallback_strategy()
-
-def check_ollama_available(self) -> bool:
-    """Check if Ollama is running and model is available"""
-    try:
-        # Check if Ollama is running
-        response = requests.get(f"{self.ollama_host}/api/tags", timeout=5)
-        if response.status_code != 200:
-            print(f"⚠️ Ollama not responding (status {response.status_code})")
-            return False
-        
-        # Check if our model is available
-        models = response.json().get('models', [])
-        model_names = [model.get('name', '').split(':')[0] for model in models]
-        
-        if self.model not in model_names:
-            print(f"⚠️ Model {self.model} not found. Available: {model_names}")
-            print(f"   Run: ollama pull {self.model}")
-            return False
-        
-        print(f"✅ Ollama model {self.model} is available")
-        return True
-        
-    except Exception as e:
-        print(f"⚠️ Ollama not available: {e}")
-        return False
+        return self._generate_with_openai(prompt)
     
     def _generate_with_openai(self, prompt: str) -> Dict[str, Any]:
         """Generate strategy using OpenAI API"""
@@ -166,7 +96,16 @@ def check_ollama_available(self) -> bool:
                 },
                 json={
                     "model": self.model,
-                    "messages": [{"role": "user", "content": prompt}],
+                    "messages": [
+                        {
+                            "role": "system", 
+                            "content": "You are a DeFi vault manager. Respond only with valid JSON strategy objects. No additional text."
+                        },
+                        {
+                            "role": "user", 
+                            "content": prompt
+                        }
+                    ],
                     "temperature": self.temperature,
                     "max_tokens": self.max_tokens
                 },
@@ -174,13 +113,15 @@ def check_ollama_available(self) -> bool:
             )
             
             if response.status_code != 200:
-                raise Exception(f"OpenAI API error: {response.text}")
+                print(f"❌ OpenAI API error: {response.status_code} - {response.text}")
+                return self._fallback_strategy()
             
             result = response.json()
             content = result['choices'][0]['message']['content']
             
             print(f"🤖 OpenAI Response: {content[:200]}...")
             
+            # Extract JSON from response
             strategy = self._extract_json_from_response(content)
             return strategy if strategy else self._fallback_strategy()
             
@@ -229,67 +170,64 @@ def check_ollama_available(self) -> bool:
             ]
         }
     
-    def check_ollama_available(self) -> bool:
-        """Check if Ollama is running and model is available"""
+    def check_api_available(self) -> bool:
+        """Check if OpenAI API is accessible"""
         try:
-            # Check if Ollama is running
-            response = requests.get(f"{self.ollama_host}/api/tags", timeout=5)
-            if response.status_code != 200:
-                return False
-            
-            # Check if our model is available
-            models = response.json().get('models', [])
-            model_names = [model.get('name', '').split(':')[0] for model in models]
-            
-            if self.model not in model_names:
-                print(f"⚠️ Model {self.model} not found. Available: {model_names}")
-                print(f"   Run: ollama pull {self.model}")
-                return False
-            
-            return True
-            
+            response = requests.post(
+                "https://api.openai.com/v1/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {self.api_key}",
+                    "Content-Type": "application/json"
+                },
+                json={
+                    "model": "gpt-4o-mini",
+                    "messages": [{"role": "user", "content": "test"}],
+                    "max_tokens": 5
+                },
+                timeout=10
+            )
+            return response.status_code == 200
         except Exception as e:
-            print(f"⚠️ Ollama not available: {e}")
+            print(f"⚠️ OpenAI API not available: {e}")
             return False
 
 
+# Enhanced agent tool using OpenAI LLM planner
 @tool
 def ai_strategy_advisor(current_situation: str = "general_analysis") -> str:
     """
-    Use local AI to analyze current vault situation and recommend strategies.
+    Use OpenAI to analyze current vault situation and recommend strategies.
     
     Args:
         current_situation: Description of the current situation to analyze
     """
     print(f"Tool: ai_strategy_advisor - Situation: {current_situation}")
     
-    # Initialize Ollama LLM planner
+    # Initialize OpenAI LLM planner
     llm_config = {
-        'provider': 'ollama',
-        'model': 'llama3.2',  # or 'qwen2.5', 'mistral', etc.
+        'provider': 'openai',
+        'model': 'gpt-4o-mini',
         'temperature': 0.1,
-        'max_tokens': 1500,
-        'ollama_host': 'http://localhost:11434'
+        'max_tokens': 1500
     }
     
     try:
-        planner = OllamaLLMPlanner(llm_config)
+        planner = OpenAILLMPlanner(llm_config)
         
-        # Check if Ollama is available
-        if not planner.check_ollama_available():
+        # Check if OpenAI API is available
+        if not planner.check_api_available():
             return """
-❌ Local AI (Ollama) not available. 
+❌ OpenAI API not available. 
 
-To set up local AI:
-1. Install Ollama: https://ollama.ai
-2. Pull a model: ollama pull llama3.2
-3. Start Ollama: ollama serve
-4. Retry this command
+Please check:
+1. OPENAI_API_KEY is set in .env file
+2. API key is valid and has credits
+3. Internet connection is working
 
 Using fallback rule-based strategy instead.
             """
         
-        # Get current vault status (you could make this dynamic)
+        # Get current vault status (you could make this dynamic by calling other tools)
         vault_status = {
             "liquid_usdc": 290.0,  # From your health check
             "prize_pool": 0.0,
@@ -305,11 +243,11 @@ Using fallback rule-based strategy instead.
             "situation_description": current_situation
         }
         
-        # Generate strategy using local AI
+        # Generate strategy using OpenAI
         strategy = planner.generate_vault_strategy(market_data, vault_status)
         
         return f"""
-🤖 AI Strategy Recommendation:
+🤖 AI Strategy Recommendation (OpenAI):
 
 Strategy Type: {strategy['strategy_type']}
 Primary Action: {strategy['primary_action']}
@@ -329,30 +267,26 @@ AI Recommendations:
         return f"❌ AI strategy advisor failed: {e}\n\nUsing fallback: Recommend 150 USDC yield harvest for weekly lottery."
 
 
-# Setup instructions for users
-def setup_ollama_instructions():
-    return """
-🤖 Setting Up Local AI (Ollama) for Vault Management
+# Test function
+def test_openai_connection():
+    """Test OpenAI connection"""
+    config = {
+        'provider': 'openai',
+        'model': 'gpt-4o-mini',
+        'temperature': 0.1,
+        'max_tokens': 100
+    }
+    
+    try:
+        planner = OpenAILLMPlanner(config)
+        available = planner.check_api_available()
+        print(f"✅ OpenAI API Available: {available}")
+        return available
+    except Exception as e:
+        print(f"❌ OpenAI Test Failed: {e}")
+        return False
 
-1. Install Ollama:
-   curl -fsSL https://ollama.ai/install.sh | sh
-
-2. Pull a model (choose one):
-   ollama pull llama3.2        # 2B params, fast
-   ollama pull qwen2.5:7b      # 7B params, better reasoning
-   ollama pull mistral         # Good balance
-
-3. Start Ollama:
-   ollama serve
-
-4. Test it:
-   ollama run llama3.2 "Hello"
-
-5. Update your config to use the model:
-   model: 'llama3.2' or 'qwen2.5:7b' or 'mistral'
-
-Now your vault agent will have local AI reasoning! 🎉
-    """
 
 if __name__ == "__main__":
-    print(setup_ollama_instructions())
+    print("🧪 Testing OpenAI LLM Planner...")
+    test_openai_connection()
