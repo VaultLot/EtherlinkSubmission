@@ -36,3 +36,9 @@ issues with aurora faucet, having to deploy on eth sepolia for now until faucet 
    2. Approve the Vault to spend your USDC.
    3. Deposit USDC into the Vault.
    4. Use your agent to manage the protocol on Sepolia!
+
+
+   Near fixed:
+   Mock USDC Token:      0xC0933C5440c656464D1Eb1F886422bE3466B1459
+   Lottery Vault:        0xf0f994B4A8dB86A46a1eD4F12263c795b26703Ca
+   NEAR VRF Strategy:    0x959e85561b3cc2E2AE9e9764f55499525E350f56
