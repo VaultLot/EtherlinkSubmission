@@ -1,3 +1,33 @@
+POA:
+
+Etherlink Testnet Protocols/Features:
+LayerZero Bridge - https://docs.etherlink.com/tools/cross‑chain‑comms/
+Plend (lending/borrowing) - https://testnet.plend.finance/
+TachySwap (AMM DEX) - https://defillama.com/protocol/tachyswap - LP token 0xE012...D4240
+Hashleap (payments) -  https://blog.hashleap.io/tagged/web3 
+Omnisea (NFT marketplace) - https://x.com/omnisea/status/1791468775663182032
+Degenerator.wtf (meme-token DEX) - https://xtz.news/meme‑coins/degenerator‑aims‑to‑bring‑memecoin‑supercycle‑to‑tezos‑via‑etherlink
+Bit Hotel (metaverse/gaming) - https://medium.com/etherlink/bit‑hotel‑brings‑social‑first‑gaming‑to‑etherlink‑1dd2fec32464 
+Hanji (CLOB trading platform) - https://docs.hanji.io/
+
+WHEN WORTH IT - BRIDGE FUNDS TO GENERATE YIELD ON OTHER 
+
+Etherlink Mainnet Protocols/Features:
+IguanaDEX (PancakeSwap v3 fork AMM)
+SuperLend (lending)
+Hanji (CLOB trading)
+Uranium.io
+Organicgrowth.wtf (token launches & trading)
+Omnisea (NFT marketplace)?
+Degenerator.wtf (meme DEX)
+Bit Hotel (metaverse/gaming)
+Uniswap v3 (via co-incentive pools)
+
+
+Mempool MEV strategies:
+[to do]
+
+
 # TroveFi: The AI-Powered Yield Raffle Game
 
 ### [Live App](https://startling-lolly-07ea9a.netlify.app/)
@@ -22,7 +52,7 @@ This is the market gap. People want the security of savings combined with the ex
 
 ## 🚀 Our Solution: The AI-Powered, No-Loss Savings Game
 
-**Flow Prize Savings** is the first AI-managed, prize-linked savings protocol on the Flow blockchain. We've created a **positive-sum game** where users can't lose. By depositing funds, you are not only saving your money securely but also automatically entering a weekly draw to win the entire prize pool generated from the collective yield.
+**Prize Savings** is the first AI-managed, prize-linked savings protocol on Etherlink. We've created a **positive-sum game** where users can't lose. By depositing funds, you are not only saving your money securely but also automatically entering a weekly draw to win the entire prize pool generated from the collective yield.
 
 Think of us as an **intelligent, gamified bank account**. Your money is always safe, always yours, but now it also gives you a weekly shot at a better financial future.
 
@@ -30,20 +60,20 @@ Think of us as an **intelligent, gamified bank account**. Your money is always s
 
 | Step                | Action                                                                                                                     | Technical Implementation                                                                                                                                     |
 | :------------------ | :------------------------------------------------------------------------------------------------------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **1. Deposit & Pool** | Users deposit USDC into a single, secure, non-custodial smart contract vault on Flow.                                      | Users interact with the React frontend, which calls the `deposit()` function on the `Vault.sol` contract.                                                      |
-| **2. AI Generates Prize** | Our AI agent simulates yield generation, creating and funding the weekly prize pool.                                         | The agent's backend calls `simulate_yield_harvest_and_deposit()`, which mints MockUSDC and deposits it into the `FlowVrfYieldStrategy.sol` contract.               |
-| **3. Provably Fair Draw** | The agent triggers the weekly lottery, using **Flow's Native VRF** for a cryptographically secure and random winner selection. | The agent calls `trigger_lottery_draw()`, which executes the `harvestStrategy()` function on the `Vault.sol` contract, initiating the VRF draw in the strategy. |
-| **4. Win or Save** | One lucky winner receives the entire prize pool. Everyone else keeps 100% of their initial deposit.                      | The `FlowVrfYieldStrategy` contract automatically transfers the prize to the winner's address. All other users' shares in the `Vault` remain untouched.        |
+| **1. Deposit & Pool** | Users deposit USDC into a single, secure, non-custodial smart contract vault on Etherlink.                                      | Users interact with the React frontend, which calls the `deposit()` function on the `Vault.sol` contract.                                                      |
+| **2. AI Generates Prize** | Our AI agent simulates yield generation, creating and funding the weekly prize pool.                                         | The agent's backend calls `simulate_yield_harvest_and_deposit()`, which mints MockUSDC and deposits it into the `EtherlinkVrfYieldStrategy.sol` contract.               |
+| **3. Provably Fair Draw** | The agent triggers the weekly lottery, using **Etherlink's Native VRF** for a cryptographically secure and random winner selection. | The agent calls `trigger_lottery_draw()`, which executes the `harvestStrategy()` function on the `Vault.sol` contract, initiating the VRF draw in the strategy. |
+| **4. Win or Save** | One lucky winner receives the entire prize pool. Everyone else keeps 100% of their initial deposit.                      | The `EtherlinkVrfYieldStrategy` contract automatically transfers the prize to the winner's address. All other users' shares in the `Vault` remain untouched.        |
 
 ***
 
 ## 🏛️ The Philosophy: Why A "Positive-Sum Game"?
 
-Finance is too often a zero-sum game. Lotteries are a *negative-sum* game by design. **Flow Prize Savings** is built on the principle of a **positive-sum game**:
+Finance is too often a zero-sum game. Lotteries are a *negative-sum* game by design. **Etherlink Prize Savings** is built on the principle of a **positive-sum game**:
 
 * **The Winner:** Receives a prize far greater than they could have earned alone.
 * **The Participants:** Lose nothing. Their savings remain intact and they benefit from a fun, engaging experience.
-* **The Ecosystem:** Grows as more users are onboarded to a safe, compelling Web3 product, increasing overall liquidity and activity on Flow.
+* **The Ecosystem:** Grows as more users are onboarded to a safe, compelling Web3 product, increasing overall liquidity and activity on Etherlink.
 
 This philosophy is embodied by our AI agent: it works for the collective good, optimizing the prize potential while guaranteeing the safety of the individual's capital.
 
@@ -61,17 +91,17 @@ We've built a sophisticated system that blends cutting-edge AI with robust block
 * **What it is:** The protocol is managed by a sophisticated backend agent that handles all operations, from funding the prize pool to triggering draws and assessing risk.
 * **Technical Detail:** The agent is built in Python using **FastAPI** for the server, **LangChain** for structuring LLM interactions, and **OpenAI's GPT-4o-mini** as the reasoning engine. It can interpret high-level commands (e.g., "run the weekly lottery cycle") and execute a multi-step, on-chain plan. This grounds intelligent automation in a transparent, verifiable system.
 
-### 🎲 Provably Fair Lottery with Flow Native VRF
-* **What it is:** We use Flow's built-in Verifiable Random Function for cryptographically secure and auditable randomness, ensuring every lottery draw is transparent and fair.
-* **Technical Detail:** Our `FlowVrfYieldStrategy.sol` contract directly integrates with Flow's native VRF contract at `0x0000000000000000000000010000000000000001`. This avoids reliance on external oracles, providing a higher level of security and decentralization.
+### 🎲 Provably Fair Lottery with Etherlink Native VRF
+* **What it is:** We use Etherlink's built-in Verifiable Random Function for cryptographically secure and auditable randomness, ensuring every lottery draw is transparent and fair.
+* **Technical Detail:** Our `EtherlinkVrfYieldStrategy.sol` contract directly integrates with Etherlink's native VRF contract at `0x0000000000000000000000010000000000000001`. This avoids reliance on external oracles, providing a higher level of security and decentralization.
 
 ### 📊 ML-Driven Risk Management
 * **What it is:** The agent uses a machine learning model to assess the risk of potential DeFi strategies before deploying capital.
 * **Technical Detail:** The agent loads a pre-trained `.joblib` anomaly detection model. The `assess_strategy_risk()` tool can analyze a strategy's on-chain metrics (if on Ethereum) to generate a risk score, preventing the agent from allocating funds to high-risk protocols.
 
 ### 🔗 FCL & EVM Dual-Compatibility
-* **What it is:** A seamless user experience for everyone, whether they use a native Flow wallet or a standard EVM wallet like MetaMask.
-* **Technical Detail:** Our React frontend uses `wagmi` for EVM wallet connections and `@onflow/fcl` for native Flow integration. We've built custom hooks (`useFCLStatus`) to detect the user's connection type and provide a tailored UI, showcasing the power of Flow's EVM compatibility.
+* **What it is:** A seamless user experience for everyone, whether they use a native Etherlink wallet or a standard EVM wallet like MetaMask.
+* **Technical Detail:** Our React frontend uses `wagmi` for EVM wallet connections and `@onEtherlink/fcl` for native Etherlink integration. We've built custom hooks (`useFCLStatus`) to detect the user's connection type and provide a tailored UI, showcasing the power of Etherlink's EVM compatibility.
 
 ***
 
@@ -91,12 +121,12 @@ Our system is composed of three core, interconnected components designed for sec
              │
              ▼
 ┌───────────────────────────────────────────────┐
-│        🔷 Flow EVM Testnet (Smart Contracts)  │
+│        🔷 Etherlink EVM Testnet (Smart Contracts)  │
 │-----------------------------------------------│
 │  🏦 Vault.sol (Manage deposits/withdrawals)   │
-│  🎯 FlowVrfYieldStrategy.sol (Prize pool + VRF)│
+│  🎯 EtherlinkVrfYieldStrategy.sol (Prize pool + VRF)│
 │  💵 MockUSDC.sol (ERC20 token)                 │
-│  🎲 Flow Native VRF (Randomness)              │
+│  🎲 Etherlink Native VRF (Randomness)              │
 └───────────────────────────────────────────────┘
              │
              ▼
@@ -117,9 +147,9 @@ Our system is composed of three core, interconnected components designed for sec
 
 📥 **Step 1:** User deposits funds on the frontend → triggers Wagmi/FCL Hook → calls `Vault.sol`.
 
-📤 **Step 2:** `Vault.sol` deposits into `FlowVrfYieldStrategy.sol`.
+📤 **Step 2:** `Vault.sol` deposits into `EtherlinkVrfYieldStrategy.sol`.
 
-🎲 **Step 3:** Strategy requests randomness from Flow Native VRF for lottery outcomes.
+🎲 **Step 3:** Strategy requests randomness from Etherlink Native VRF for lottery outcomes.
 
 🤖 **Step 4:** AI Agent Backend:
 
@@ -128,13 +158,13 @@ Our system is composed of three core, interconnected components designed for sec
 * Executes blockchain transactions through Web3.py.
 
 
-### Core Contracts (Deployed on Flow Testnet)
+### Core Contracts (Deployed on Etherlink Testnet)
 
 | Contract              | Address                                      | Description                                                           |
 | :-------------------- | :------------------------------------------- | :-------------------------------------------------------------------- |
 | **MockUSDC**          | `0x4edbDC8Ed8Ca935513A2F06e231EE42FB6ed1d15` | An ERC20 token used for deposits and prize pools.                     |
 | **Lottery Vault**     | `0xBaE8f26eDa40Ab353A34ce38F8917318d226318F` | The main vault where users deposit and withdraw funds.                |
-| **Flow VRF Strategy** | `0xf5DC9ca0518B45C3E372c3bC7959a4f3d1B18901` | The strategy that holds the prize pool and interacts with Flow's VRF. |
+| **Etherlink VRF Strategy** | `0xf5DC9ca0518B45C3E372c3bC7959a4f3d1B18901` | The strategy that holds the prize pool and interacts with Etherlink's VRF. |
 
 ---
 
@@ -168,7 +198,7 @@ We're not just another DeFi protocol. We're creating a new category of financial
 
 | Solution                  | Your Return                         | Management                     | Risk of Loss        | Gamified  |
 | :------------------------ | :---------------------------------- | :----------------------------- | :------------------ | :-------- |
-| **Flow Prize Savings**    | **Principal + Chance to Win Yield** | **Fully Passive (AI-Managed)** | **🔥 None**         | **✅ Yes** |
+| **Etherlink Prize Savings**    | **Principal + Chance to Win Yield** | **Fully Passive (AI-Managed)** | **🔥 None**         | **✅ Yes** |
 | Traditional Savings       | Principal + \~1% APY                | Passive                        | None                | ❌ No      |
 | Lotteries / Gambling      | -100% (Usually)                     | Active                         | Very High           | ✅ Yes     |
 | Yield Aggregators (Yearn) | Principal + Yield                   | Passive                        | Smart Contract Risk | ❌ No      |
@@ -185,11 +215,11 @@ Our revenue model is simple, transparent, and fully aligned with our users' succ
     * **The Guarantee:** If there is no yield, there are no fees. We only earn when our users win.
 
 ### Go-To-Market Strategy
-* **Phase 1: Launch on Flow Testnet & Build Community (Current)**
-    * Engage with the Flow community through social media, developer forums, and hackathons.
+* **Phase 1: Launch on Etherlink Testnet & Build Community (Current)**
+    * Engage with the Etherlink community through social media, developer forums, and hackathons.
     * Gather user feedback to refine the product and user experience.
 * **Phase 2: Mainnet Launch with Real Yield Strategies**
-    * Integrate with audited, blue-chip protocols on Flow (e.g., Increment Finance) to generate real yield.
+    * Integrate with audited, blue-chip protocols on Etherlink (e.g., Increment Finance) to generate real yield.
     * Launch a marketing campaign focused on the "no-loss" value proposition to attract initial liquidity.
 * **Phase 3: Scale & Expand**
     * Introduce new features like premium prize tiers, team-based savings games, and NFT-based rewards.
@@ -201,17 +231,17 @@ Our revenue model is simple, transparent, and fully aligned with our users' succ
 
 This project provides a robust foundation. The next phase will focus on transitioning from a simulated environment to a live, fully autonomous, yield-bearing protocol.
 
-* **Implement Real Yield Strategies on Flow:**
-    * Integrate with established Flow protocols like **Increment Finance** or **Flowswap** to generate real yield from user deposits.
-    * Develop and deploy new Cadence-based yield strategies to leverage Flow's unique capabilities for gas efficiency and composability.
+* **Implement Real Yield Strategies on Etherlink:**
+    * Integrate with established Etherlink protocols like **Increment Finance** or **Etherlinkswap** to generate real yield from user deposits.
+    * Develop and deploy new Cadence-based yield strategies to leverage Etherlink's unique capabilities for gas efficiency and composability.
 * **Enhance the ML Risk Model:**
-    * Train the risk assessment model on historical data from actual Flow DeFi protocols.
+    * Train the risk assessment model on historical data from actual Etherlink DeFi protocols.
     * Build a data pipeline to continuously fetch on-chain data to keep the model updated and relevant.
     * Allow the agent to dynamically retrain the model based on new information and market conditions.
 * **Expand Agent's Autonomous Capabilities:**
     * Enable the agent to autonomously decide *when* and *how much* capital to allocate to different strategies based on risk/reward calculations.
     * Implement logic for the agent to automatically rebalance the portfolio if a strategy's risk profile changes.
-    * Use **Account Linking** on Flow to allow the agent to securely manage vault operations with clear permissions and user-controlled recovery mechanisms, creating a truly secure autonomous system.
+    * Use **Account Linking** on Etherlink to allow the agent to securely manage vault operations with clear permissions and user-controlled recovery mechanisms, creating a truly secure autonomous system.
 * **UX Enhancements with Cadence:**
     * Leverage Cadence to introduce features impossible on traditional EVM chains, such as **sponsored/batched transactions** for a gasless user experience and **walletless onboarding** for mainstream adoption.
 
@@ -240,7 +270,7 @@ This project contains a full-stack application with smart contracts, an AI backe
 ### Prerequisites
 * Node.js v18+
 * Python 3.9+
-* An EVM-compatible wallet (e.g., MetaMask) funded on the Flow Testnet.
+* An EVM-compatible wallet (e.g., MetaMask) funded on the Etherlink Testnet.
 
 ### Installation & Setup
 1.  **Clone the Repository:**
@@ -287,7 +317,7 @@ This project contains a full-stack application with smart contracts, an AI backe
 You can interact with the live agent using these `curl` commands to simulate a full operational week.
 
 1.  **Check System Health**
-    * **What it does:** Confirms the agent is online, connected to the Flow blockchain, and can communicate with our smart contracts.
+    * **What it does:** Confirms the agent is online, connected to the Etherlink blockchain, and can communicate with our smart contracts.
     * **Command:**
         ```bash
         curl http://localhost:8000/health
@@ -310,7 +340,7 @@ You can interact with the live agent using these `curl` commands to simulate a f
         ```
 
 4.  **Trigger the Lottery Draw**
-    * **What it does:** Instructs the agent to trigger the lottery, calling the smart contract that uses Flow's native VRF to select a winner.
+    * **What it does:** Instructs the agent to trigger the lottery, calling the smart contract that uses Etherlink's native VRF to select a winner.
     * **Command:**
         ```bash
         curl -X POST http://localhost:8000/trigger-lottery
@@ -343,9 +373,9 @@ You can interact with the live agent using these `curl` commands to simulate a f
 
 ## 🌐 The Vision: Onboarding the Next Billion Users to Web3
 
-Our vision is to make saving and wealth creation accessible, fun, and rewarding for everyone. We believe **Flow Prize Savings** can become the default savings account for the next generation of internet users—a place where your money is not only safe but is also constantly working to give you a shot at a better financial future.
+Our vision is to make saving and wealth creation accessible, fun, and rewarding for everyone. We believe **Etherlink Prize Savings** can become the default savings account for the next generation of internet users—a place where your money is not only safe but is also constantly working to give you a shot at a better financial future.
 
-By abstracting away the complexities of DeFi with a powerful AI and a simple, engaging interface, we are building a "killer app" that solves a real-world problem for a global audience, right here on Flow.
+By abstracting away the complexities of DeFi with a powerful AI and a simple, engaging interface, we are building a "killer app" that solves a real-world problem for a global audience, right here on Etherlink.
 
 
 
@@ -358,13 +388,13 @@ By abstracting away the complexities of DeFi with a powerful AI and a simple, en
    Mock USDC Token:     0x4edbDC8Ed8Ca935513A2F06e231EE42FB6ed1d15
    Vault Factory:       0xa87fe90A07DE4E10398F2203A9F3Bd8b98Cf902D
    Lottery Vault:       0xBaE8f26eDa40Ab353A34ce38F8917318d226318F
-   Flow VRF Strategy:   0xf5DC9ca0518B45C3E372c3bC7959a4f3d1B18901
+   Etherlink VRF Strategy:   0xf5DC9ca0518B45C3E372c3bC7959a4f3d1B18901
 ------------------------------------
 
 VRF strategy added and configured to Vault
 
 🔮 VRF Integration Details:
-   The Flow VRF Strategy uses the Cadence Arch contract at:
+   The Etherlink VRF Strategy uses the Cadence Arch contract at:
    0x0000000000000000000000010000000000000001
    This provides secure, on-chain randomness.
 
