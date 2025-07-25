@@ -15,7 +15,11 @@ Working on contracts in deployment repo
    • USDT.faucet() - 0xf0f994B4A8dB86A46a1eD4F12263c795b26703Ca
    • WETH.faucet() - 0x959e85561b3cc2E2AE9e9764f55499525E350f56
 
+  yieldAggregator: "0x98464681a7aDb649f6bE8a5c26723bD6c9a631b8",
+  layerZeroBridge: "0x282E9890357F76C46878B6c1EA6D355Ef940E407"
+
 CONTRACT NOTES:
+NEED TO MAKE VAULT MORE MODULAR FOR CONTRACT SIZE CONSTRAINTS
 Mock staking, mock lending, mock strategy -> real??
 
 POA:
