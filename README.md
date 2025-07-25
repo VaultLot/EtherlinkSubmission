@@ -1,3 +1,23 @@
+Working on contracts in deployment repo
+
+💰 Mock USDC:           0xC0933C5440c656464D1Eb1F886422bE3466B1459
+💰 Mock USDT:           0xf0f994B4A8dB86A46a1eD4F12263c795b26703Ca
+💎 Mock WETH:           0x959e85561b3cc2E2AE9e9764f55499525E350f56
+🏛️ Mock Lending:        0x9D6E64d6dE2251c1121c1f1f163794EbA5Cf97F1
+🔄 Mock DEX:            0x62FD5Ab8b5b1d11D0902Fce5B937C856301e7bf8
+📊 Mock Staking:        0x5F8E67E37e223c571D184fe3CF4e27cae33E81fF
+📋 Strategy Registry:   0x8fa300Faf24b9B764B0D7934D8861219Db0626e5
+🔍 Risk Oracle:         0xf237E15122DeE41F26bEA9D58f014Fd105b531aC
+
+
+📱 To get test tokens, call faucet() on:
+   • USDC.faucet() - 0xC0933C5440c656464D1Eb1F886422bE3466B1459
+   • USDT.faucet() - 0xf0f994B4A8dB86A46a1eD4F12263c795b26703Ca
+   • WETH.faucet() - 0x959e85561b3cc2E2AE9e9764f55499525E350f56
+
+CONTRACT NOTES:
+Mock staking, mock lending, mock strategy -> real??
+
 POA:
 
 Etherlink Testnet Protocols/Features:
