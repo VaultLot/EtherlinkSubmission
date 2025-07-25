@@ -1,4 +1,4 @@
-Working on contracts in deployment repo
+Contracts Deployed, will adjust and test agent and then frontend.
 
 💰 Mock USDC:           0xC0933C5440c656464D1Eb1F886422bE3466B1459
 💰 Mock USDT:           0xf0f994B4A8dB86A46a1eD4F12263c795b26703Ca
@@ -43,6 +43,11 @@ LOTTERY_EXTENSION = "0xBB28f99330B5fDffd96a1D1D5D6f94345B6e1229"
 USDC_ADDRESS = "0xC0933C5440c656464D1Eb1F886422bE3466B1459"
 RISK_ORACLE = "0xf237E15122DeE41F26bEA9D58f014Fd105b531aC"
 STRATEGY_REGISTRY = "0x8fa300Faf24b9B764B0D7934D8861219Db0626e5"
+
+   ✅ EmergencySystem: 0x25bc04a49997e25B7482eEcbeB2Ec67740AEd5a6
+
+      ✅ VaultFactory: 0xA2cD4CC41b8DCE00D002Aa4B29050f2d53705400
+   
 
 🎰 Lottery Functions:
 - Vault handles deposits/withdrawals automatically
