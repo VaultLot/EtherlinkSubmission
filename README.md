@@ -18,6 +18,51 @@ Working on contracts in deployment repo
   yieldAggregator: "0x98464681a7aDb649f6bE8a5c26723bD6c9a631b8",
   layerZeroBridge: "0x282E9890357F76C46878B6c1EA6D355Ef940E407"
 
+
+🏦 Step 1: Deploying EtherlinkVaultCore (size-optimized)...
+   ✅ EtherlinkVaultCore: 0x15DcEF7A9C2AbFD8a8a53BE9378a3A7B3ac9e5eD
+   📏 Contract deployed successfully (size limit bypassed)
+
+🎰 Step 2: Deploying LotteryExtension...
+   ✅ LotteryExtension: 0xBB28f99330B5fDffd96a1D1D5D6f94345B6e1229
+
+🎲 Step 3: Deploying EtherlinkYieldLottery Strategy...
+   ✅ EtherlinkYieldLottery: 0x98D6d0b9027Db5f035ab9d608D24896C7812455b
+
+
+
+📱 Quick Start Commands:
+1. Get test USDC: mockUSDC.faucet()
+2. Approve vault: mockUSDC.approve("0x15DcEF7A9C2AbFD8a8a53BE9378a3A7B3ac9e5eD", amount)
+3. Deposit: vaultCore.deposit(amount, yourAddress)
+4. Check status: vaultCore.getProtocolStatus()
+
+🤖 Python Agent Setup:
+VAULT_CORE_ADDRESS = "0x15DcEF7A9C2AbFD8a8a53BE9378a3A7B3ac9e5eD"
+LOTTERY_EXTENSION = "0xBB28f99330B5fDffd96a1D1D5D6f94345B6e1229"
+USDC_ADDRESS = "0xC0933C5440c656464D1Eb1F886422bE3466B1459"
+RISK_ORACLE = "0xf237E15122DeE41F26bEA9D58f014Fd105b531aC"
+STRATEGY_REGISTRY = "0x8fa300Faf24b9B764B0D7934D8861219Db0626e5"
+
+🎰 Lottery Functions:
+- Vault handles deposits/withdrawals automatically
+- Lottery extension handles prize distribution
+- Manual lottery: lotteryExtension.executeLottery()
+
+💾 Saving all addresses to deployments-modular.json...
+✅ Addresses saved!
+
+🧪 Running basic functionality tests...
+📊 Vault Status:
+   Liquid USDC: 0
+   Prize Pool: 0
+   Strategies: 1
+   Lottery Ready: false
+   Asset Token: 0xC0933C5440c656464D1Eb1F886422bE3466B1459
+   ✅ Vault core is functional!
+   Lottery Prize Pool: 0.0 USDC
+   ✅ Lottery extension is functional!
+
 CONTRACT NOTES:
 NEED TO MAKE VAULT MORE MODULAR FOR CONTRACT SIZE CONSTRAINTS
 Mock staking, mock lending, mock strategy -> real??
