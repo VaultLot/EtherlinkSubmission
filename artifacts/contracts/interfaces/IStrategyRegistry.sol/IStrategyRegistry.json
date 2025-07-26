@@ -1,0 +1,196 @@
+{
+  "_format": "hh-sol-artifact-1",
+  "contractName": "IStrategyRegistry",
+  "sourceName": "contracts/interfaces/IStrategyRegistry.sol",
+  "abi": [
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "agent",
+          "type": "address"
+        }
+      ],
+      "name": "addPythonAgent",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "totalAmount",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "maxRiskTolerance",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "diversificationTargets",
+          "type": "uint256"
+        }
+      ],
+      "name": "getMultiStrategyAllocation",
+      "outputs": [
+        {
+          "internalType": "bytes32[]",
+          "name": "selectedStrategies",
+          "type": "bytes32[]"
+        },
+        {
+          "internalType": "uint256[]",
+          "name": "allocations",
+          "type": "uint256[]"
+        },
+        {
+          "internalType": "uint256",
+          "name": "totalExpectedReturn",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "amount",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "maxRiskTolerance",
+          "type": "uint256"
+        },
+        {
+          "internalType": "bool",
+          "name": "crossChainAllowed",
+          "type": "bool"
+        },
+        {
+          "internalType": "uint16",
+          "name": "preferredChain",
+          "type": "uint16"
+        }
+      ],
+      "name": "getOptimalStrategy",
+      "outputs": [
+        {
+          "internalType": "bytes32",
+          "name": "bestStrategy",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "uint256",
+          "name": "expectedReturn",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "riskScore",
+          "type": "uint256"
+        },
+        {
+          "internalType": "bool",
+          "name": "requiresBridge",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "string",
+          "name": "name",
+          "type": "string"
+        },
+        {
+          "internalType": "uint16",
+          "name": "chainId",
+          "type": "uint16"
+        }
+      ],
+      "name": "getStrategyByName",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "strategyAddress",
+          "type": "address"
+        },
+        {
+          "internalType": "uint16",
+          "name": "chainId_",
+          "type": "uint16"
+        },
+        {
+          "internalType": "string",
+          "name": "name_",
+          "type": "string"
+        },
+        {
+          "internalType": "string",
+          "name": "protocol",
+          "type": "string"
+        },
+        {
+          "internalType": "uint256",
+          "name": "currentAPY",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "riskScore",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "tvl",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "maxCapacity",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "minDeposit",
+          "type": "uint256"
+        },
+        {
+          "internalType": "bool",
+          "name": "active",
+          "type": "bool"
+        },
+        {
+          "internalType": "bool",
+          "name": "crossChainEnabled",
+          "type": "bool"
+        },
+        {
+          "internalType": "uint256",
+          "name": "lastUpdate",
+          "type": "uint256"
+        },
+        {
+          "internalType": "bytes",
+          "name": "strategyData",
+          "type": "bytes"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    }
+  ],
+  "bytecode": "0x",
+  "deployedBytecode": "0x",
+  "linkReferences": {},
+  "deployedLinkReferences": {}
+}

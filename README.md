@@ -70,7 +70,7 @@ STRATEGY_REGISTRY = "0x8fa300Faf24b9B764B0D7934D8861219Db0626e5"
 
 CONTRACT NOTES:
 NEED TO MAKE VAULT MORE MODULAR FOR CONTRACT SIZE CONSTRAINTS
-Mock staking, mock lending, mock strategy -> real??
+Mock protocols, staking, mock lending, mock strategy -> real??
 
 POA:
 
