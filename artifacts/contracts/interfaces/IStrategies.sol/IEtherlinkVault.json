@@ -1,0 +1,145 @@
+{
+  "_format": "hh-sol-artifact-1",
+  "contractName": "IEtherlinkVault",
+  "sourceName": "contracts/interfaces/IStrategies.sol",
+  "abi": [
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "strategy",
+          "type": "address"
+        },
+        {
+          "internalType": "string",
+          "name": "name",
+          "type": "string"
+        }
+      ],
+      "name": "addNamedStrategy",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "asset",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "amount",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "maxRiskTolerance",
+          "type": "uint256"
+        },
+        {
+          "internalType": "bool",
+          "name": "allowCrossChain",
+          "type": "bool"
+        }
+      ],
+      "name": "deployToOptimalStrategy",
+      "outputs": [
+        {
+          "internalType": "bytes32",
+          "name": "",
+          "type": "bytes32"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "executeLottery",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "winner",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "getProtocolStatus",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "liquidUSDC",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "prizePool",
+          "type": "uint256"
+        },
+        {
+          "internalType": "address",
+          "name": "lastWinner",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "totalDeployed",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "numberOfStrategies",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "avgAPY",
+          "type": "uint256"
+        },
+        {
+          "internalType": "bool",
+          "name": "lotteryReady",
+          "type": "bool"
+        },
+        {
+          "internalType": "uint256",
+          "name": "timeUntilLottery",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "strategy",
+          "type": "address"
+        }
+      ],
+      "name": "removeNamedStrategy",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }
+  ],
+  "bytecode": "0x",
+  "deployedBytecode": "0x",
+  "linkReferences": {},
+  "deployedLinkReferences": {}
+}

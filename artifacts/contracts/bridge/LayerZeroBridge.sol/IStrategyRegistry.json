@@ -1,0 +1,60 @@
+{
+  "_format": "hh-sol-artifact-1",
+  "contractName": "IStrategyRegistry",
+  "sourceName": "contracts/bridge/LayerZeroBridge.sol",
+  "abi": [
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "amount",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "maxRiskTolerance",
+          "type": "uint256"
+        },
+        {
+          "internalType": "bool",
+          "name": "crossChainAllowed",
+          "type": "bool"
+        },
+        {
+          "internalType": "uint16",
+          "name": "preferredChain",
+          "type": "uint16"
+        }
+      ],
+      "name": "getOptimalStrategy",
+      "outputs": [
+        {
+          "internalType": "bytes32",
+          "name": "bestStrategy",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "uint256",
+          "name": "expectedReturn",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "riskScore",
+          "type": "uint256"
+        },
+        {
+          "internalType": "bool",
+          "name": "requiresBridge",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    }
+  ],
+  "bytecode": "0x",
+  "deployedBytecode": "0x",
+  "linkReferences": {},
+  "deployedLinkReferences": {}
+}
