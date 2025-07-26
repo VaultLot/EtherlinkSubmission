@@ -1,3 +1,50 @@
+
+🤖 Autonomous Rebalancing Engine
+Every 5 Minutes:
+
+🧠 ML Risk Assessment: Uses your trained risk models to evaluate strategy safety
+📊 Market Analysis: Monitors volatility, liquidity, and market stress
+🔍 Opportunity Scanning: Identifies optimal yield opportunities across chains
+
+Every 4 Hours:
+
+⚡ Optimal Allocation: ML calculates best fund distribution
+💰 Smart Execution: Automatically deploys funds to optimal strategies
+🎯 Performance Tracking: Learns from results to improve decisions
+
+Immediate Response:
+
+🚨 Emergency Exits: Automatically exits if strategy risk > 80%
+🔄 Market Adaptation: Reduces risk in stress conditions
+📈 Yield Maximization: Moves funds to better opportunities
+
+# 1. Start the enhanced agent
+python enhanced_etherlink_agent.py
+
+# 2. Test autonomous rebalancing
+python autonomous_demo.py
+
+# 3. Monitor autonomous decisions
+curl -X GET "http://localhost:8000/rebalancing-status"
+
+# 4. Force immediate rebalance
+curl -X POST "http://localhost:8000/force-rebalance"
+
+## TODO FOR PROD:
+URGENT:
+
+Mock DeFi Protocols → Real Aave/Compound/Curve integration
+Simulated Cross-Chain → Real LayerZero bridge execution
+Hardcoded Market Data → Real-time DeFiLlama/CoinGecko APIs
+Basic Security → Multi-sig wallets, timelocks, daily limits
+
+🔧 NEXT PRIORITY:
+
+In-Memory Storage → PostgreSQL database
+Console Logging → Prometheus/Grafana monitoring
+Pseudo-Random → Real Etherlink VRF integration
+No Compliance → AML/audit logging systems
+
 # Etherlink Prize Savings: The AI-Powered Savings Game
 
 **Where financial growth meets the thrill of the win. We are turning passive savings into an active, rewarding experience you can't lose.**
