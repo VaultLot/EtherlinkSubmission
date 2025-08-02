@@ -1,3 +1,21 @@
+
+## TODO FOR PROD:
+URGENT:
+
+Mock DeFi Protocols → Real Aave/Compound/Curve integration
+Simulated Cross-Chain → Real LayerZero bridge execution [WHEN MOVING TO MAINNET]
+Hardcoded Market Data → Real-time DeFiLlama/CoinGecko APIs
+Basic Security → Multi-sig wallets, timelocks, daily limits
+
+🔧 NEXT PRIORITY:
+
+In-Memory Storage → PostgreSQL database
+Console Logging → Prometheus/Grafana monitoring
+Pseudo-Random → Real Etherlink VRF integration
+No Compliance → AML/audit logging systems
+
+
+
 Contracts Deployed, will adjust and test agent and then frontend.
 
 💰 Mock USDC:           0xC0933C5440c656464D1Eb1F886422bE3466B1459

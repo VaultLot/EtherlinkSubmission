@@ -9,7 +9,6 @@ import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 /// @title IBridge
 /// @notice Interface for cross-chain bridge functionality
 /// @dev Defines the standard methods for bridging assets across chains
-/// @dev Implement Fully on Mainnet https://docs.layerzero.network/v2/deployments/chains/etherlink
 interface IBridge {
     // ============ Structs ============
     
