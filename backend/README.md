@@ -30,20 +30,6 @@ curl -X GET "http://localhost:8000/rebalancing-status"
 # 4. Force immediate rebalance
 curl -X POST "http://localhost:8000/force-rebalance"
 
-## TODO FOR PROD:
-URGENT:
-
-Mock DeFi Protocols → Real Aave/Compound/Curve integration
-Simulated Cross-Chain → Real LayerZero bridge execution
-Hardcoded Market Data → Real-time DeFiLlama/CoinGecko APIs
-Basic Security → Multi-sig wallets, timelocks, daily limits
-
-🔧 NEXT PRIORITY:
-
-In-Memory Storage → PostgreSQL database
-Console Logging → Prometheus/Grafana monitoring
-Pseudo-Random → Real Etherlink VRF integration
-No Compliance → AML/audit logging systems
 
 # Etherlink Prize Savings: The AI-Powered Savings Game
 
