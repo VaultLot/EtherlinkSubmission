@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { useAccount, useReadContract } from 'wagmi'
-import { CONTRACTS, FLOW_VRF_YIELD_STRATEGY_ABI } from '@/lib/contracts'
+import { CONTRACTS, LOTTERY_EXTENSION_ABI } from '@/lib/contracts'
 import { formatTokenAmount, formatAddress } from '@/lib/utils'
 import { Trophy, Clock, ExternalLink, TrendingUp } from 'lucide-react'
 import { useState, useEffect } from 'react'
@@ -21,17 +21,26 @@ export function LotteryHistory() {
 
   // Read last winner
   const { data: lastWinner } = useReadContract({
-    address: CONTRACTS.FLOW_VRF_YIELD_STRATEGY,
-    abi: FLOW_VRF_YIELD_STRATEGY_ABI,
+    address: CONTRACTS.LOTTERY_EXTENSION,
+    abi: LOTTERY_EXTENSION_ABI,
     functionName: 'lastWinner',
   })
 
-  // Read current prize pool
-  const { data: prizePool } = useReadContract({
-    address: CONTRACTS.FLOW_VRF_YIELD_STRATEGY,
-    abi: FLOW_VRF_YIELD_STRATEGY_ABI,
-    functionName: 'getBalance',
+  // Read last payout
+  const { data: lastPayout } = useReadContract({
+    address: CONTRACTS.LOTTERY_EXTENSION,
+    abi: LOTTERY_EXTENSION_ABI,
+    functionName: 'lastPayout',
   })
+
+  // Read current prize pool
+  const { data: lotteryInfo } = useReadContract({
+    address: CONTRACTS.LOTTERY_EXTENSION,
+    abi: LOTTERY_EXTENSION_ABI,
+    functionName: 'getLotteryInfo',
+  })
+
+  const prizePool = lotteryInfo ? lotteryInfo[0] : BigInt(0) // prizePool
 
   // Helper function to check if BigInt is greater than zero
   const isPositiveBigInt = (value: bigint | undefined): boolean => {
@@ -40,38 +49,47 @@ export function LotteryHistory() {
 
   // Mock data for demonstration - in a real app, you'd fetch from events
   useEffect(() => {
-    const mockWins: LotteryEvent[] = [
-      {
+    const mockWins: LotteryEvent[] = []
+    
+    // If we have a last winner and payout, create a mock entry
+    if (lastWinner && 
+        lastWinner !== '0x0000000000000000000000000000000000000000' && 
+        lastPayout && 
+        lastPayout > 0n) {
+      mockWins.push({
         id: '1',
-        winner: lastWinner as string || '0x1234567890123456789012345678901234567890',
-        amount: '156.75',
+        winner: lastWinner as string,
+        amount: formatTokenAmount(lastPayout, 6),
         blockNumber: 1234567,
         timestamp: Date.now() - 7 * 24 * 60 * 60 * 1000, // 1 week ago
         txHash: '0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890'
-      },
-      {
-        id: '2',
-        winner: '0x2234567890123456789012345678901234567891',
-        amount: '234.50',
-        blockNumber: 1234000,
-        timestamp: Date.now() - 14 * 24 * 60 * 60 * 1000, // 2 weeks ago
-        txHash: '0xbcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567891'
-      },
-      {
-        id: '3',
-        winner: '0x3234567890123456789012345678901234567892',
-        amount: '189.25',
-        blockNumber: 1233500,
-        timestamp: Date.now() - 21 * 24 * 60 * 60 * 1000, // 3 weeks ago
-        txHash: '0xcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567892'
-      }
-    ]
-
-    // Only show wins if we have a last winner
-    if (lastWinner && lastWinner !== '0x0000000000000000000000000000000000000000') {
-      setRecentWins(mockWins)
+      })
     }
-  }, [lastWinner])
+
+    // Add some additional mock data for demonstration
+    if (mockWins.length > 0) {
+      mockWins.push(
+        {
+          id: '2',
+          winner: '0x2234567890123456789012345678901234567891',
+          amount: '234.50',
+          blockNumber: 1234000,
+          timestamp: Date.now() - 14 * 24 * 60 * 60 * 1000, // 2 weeks ago
+          txHash: '0xbcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567891'
+        },
+        {
+          id: '3',
+          winner: '0x3234567890123456789012345678901234567892',
+          amount: '189.25',
+          blockNumber: 1233500,
+          timestamp: Date.now() - 21 * 24 * 60 * 60 * 1000, // 3 weeks ago
+          txHash: '0xcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567892'
+        }
+      )
+    }
+
+    setRecentWins(mockWins)
+  }, [lastWinner, lastPayout])
 
   const formatTimestamp = (timestamp: number) => {
     const date = new Date(timestamp)
@@ -108,7 +126,6 @@ export function LotteryHistory() {
             <p className="text-gray-500 text-sm">
               Be the first to win the lottery! The next draw is coming soon.
             </p>
-            {/* FIX: Use the boolean helper directly and add the non-null assertion ! */}
             {isPositiveBigInt(prizePool) && (
               <div className="mt-4 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
                 <div className="text-sm font-medium text-yellow-800">
@@ -162,7 +179,7 @@ export function LotteryHistory() {
                     ${win.amount} USDC
                   </div>
                   <a
-                    href={`https://evm-testnet.flowscan.io/tx/${win.txHash}`}
+                    href={`https://testnet.explorer.etherlink.com/tx/${win.txHash}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-xs text-blue-500 hover:text-blue-700 flex items-center justify-end"
@@ -173,7 +190,6 @@ export function LotteryHistory() {
               </div>
             ))}
 
-            {/* FIX: Use the boolean helper directly and add the non-null assertion `!` */}
             {isPositiveBigInt(prizePool) && (
               <div className="mt-6 p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border border-blue-200">
                 <div className="flex items-center justify-between">

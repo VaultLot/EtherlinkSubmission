@@ -1,43 +1,42 @@
 import { createConfig, http } from 'wagmi'
-import { flowTestnet } from 'wagmi/chains'
-import { fclWagmiAdapter } from '@onflow/fcl-wagmi-adapter'
-import { metaMask, walletConnect, injected } from 'wagmi/connectors'
-import * as fcl from '@onflow/fcl'
+import { metaMask, injected, walletConnect } from 'wagmi/connectors'
 
-// Enhanced Flow Testnet configuration
-const flowTestnetEnhanced = {
-  ...flowTestnet,
+// Etherlink Testnet configuration
+const etherlinkTestnet = {
+  id: 128123,
+  name: 'Etherlink Testnet',
+  nativeCurrency: {
+    decimals: 18,
+    name: 'Tez',
+    symbol: 'XTZ',
+  },
   rpcUrls: {
     default: {
-      http: ['https://testnet.evm.nodes.onflow.org'],
+      http: ['https://node.ghostnet.etherlink.com'],
     },
     public: {
-      http: ['https://testnet.evm.nodes.onflow.org'],
+      http: ['https://node.ghostnet.etherlink.com'],
     },
   },
   blockExplorers: {
     default: {
-      name: 'FlowScan',
-      url: 'https://evm-testnet.flowscan.io',
+      name: 'Etherlink Testnet Explorer',
+      url: 'https://testnet.explorer.etherlink.com',
     },
   },
+  testnet: true,
 } as const
 
-// Define the chains array once to be passed to the config and connectors
-const chains = [flowTestnetEnhanced] as const;
+// Define the chains array
+const chains = [etherlinkTestnet] as const;
 
 export const config = createConfig({
-  chains, // Pass the chains array here
+  chains,
   connectors: [
-    // Official FCL Wagmi connector with proper configuration
-    fclWagmiAdapter({
-      user: fcl.currentUser,
-      config: fcl.config,
-    }),
     metaMask({
       dappMetadata: {
-        name: 'Flow Prize Savings',
-        url: 'https://flow-prize-savings.vercel.app',
+        name: 'Etherlink Prize Savings',
+        url: 'https://etherlink-prize-savings.vercel.app',
       },
     }),
     injected({
@@ -46,15 +45,15 @@ export const config = createConfig({
     walletConnect({
       projectId: import.meta.env.VITE_WALLETCONNECT_PROJECT_ID || 'demo-project-id',
       metadata: {
-        name: 'Flow Prize Savings',
-        description: 'No-Loss Lottery on Flow',
-        url: 'https://flow-prize-savings.vercel.app',
-        icons: ['https://flow-prize-savings.vercel.app/icon.png'],
+        name: 'Etherlink Prize Savings',
+        description: 'No-Loss Lottery on Etherlink',
+        url: 'https://etherlink-prize-savings.vercel.app',
+        icons: ['https://etherlink-prize-savings.vercel.app/icon.png'],
       },
     }),
   ],
   transports: {
-    [flowTestnetEnhanced.id]: http('https://testnet.evm.nodes.onflow.org', {
+    [etherlinkTestnet.id]: http('https://node.ghostnet.etherlink.com', {
       timeout: 30_000, // 30 seconds
       retryCount: 3,
       retryDelay: 1000, // 1 second
@@ -66,51 +65,51 @@ export const config = createConfig({
   },
 })
 
-// Helper function to add Flow Testnet to MetaMask
-export const addFlowTestnetToMetaMask = async () => {
+// Helper function to add Etherlink Testnet to MetaMask
+export const addEtherlinkTestnetToMetaMask = async () => {
   if (typeof window !== 'undefined' && window.ethereum) {
     try {
       await window.ethereum.request({
         method: 'wallet_addEthereumChain',
         params: [
           {
-            chainId: '0x221', // 545 in hex
-            chainName: 'Flow Testnet',
+            chainId: '0x1F4DB', // 128123 in hex
+            chainName: 'Etherlink Testnet',
             nativeCurrency: {
-              name: 'Flow',
-              symbol: 'FLOW',
+              name: 'Tez',
+              symbol: 'XTZ',
               decimals: 18,
             },
-            rpcUrls: ['https://testnet.evm.nodes.onflow.org'],
-            blockExplorerUrls: ['https://evm-testnet.flowscan.io'],
-            iconUrls: ['https://assets.coingecko.com/coins/images/13446/small/flow-logo.png'],
+            rpcUrls: ['https://node.ghostnet.etherlink.com'],
+            blockExplorerUrls: ['https://testnet.explorer.etherlink.com'],
+            iconUrls: ['https://assets.coingecko.com/coins/images/976/small/Tezos-logo.png'],
           },
         ],
       })
       return true
     } catch (error) {
-      console.error('Failed to add Flow Testnet to MetaMask:', error)
+      console.error('Failed to add Etherlink Testnet to MetaMask:', error)
       return false
     }
   }
   return false
 }
 
-// Helper function to switch to Flow Testnet
-export const switchToFlowTestnet = async () => {
+// Helper function to switch to Etherlink Testnet
+export const switchToEtherlinkTestnet = async () => {
   if (typeof window !== 'undefined' && window.ethereum) {
     try {
       await window.ethereum.request({
         method: 'wallet_switchEthereumChain',
-        params: [{ chainId: '0x221' }], // 545 in hex
+        params: [{ chainId: '0x1F4DB' }], // 128123 in hex
       })
       return true
     } catch (error: any) {
       // Chain not added to MetaMask
       if (error.code === 4902) {
-        return await addFlowTestnetToMetaMask()
+        return await addEtherlinkTestnetToMetaMask()
       }
-      console.error('Failed to switch to Flow Testnet:', error)
+      console.error('Failed to switch to Etherlink Testnet:', error)
       return false
     }
   }

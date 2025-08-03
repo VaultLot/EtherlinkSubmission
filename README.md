@@ -1,134 +1,17 @@
+# Etherlink AI-Powered No Loss Lottery 🚀
 
-## TODO FOR PROD:
-URGENT:
+> **Production-ready AI agent for weekly yield lottery with ML risk assessment and real-time market intelligence**
 
-Mock DeFi Protocols → Real Aave/Compound/Curve integration
-Simulated Cross-Chain → Real LayerZero bridge execution [WHEN MOVING TO MAINNET]
-Hardcoded Market Data → Real-time DeFiLlama/CoinGecko APIs
-Basic Security → Multi-sig wallets, timelocks, daily limits
-
-🔧 NEXT PRIORITY:
-
-In-Memory Storage → PostgreSQL database
-Console Logging → Prometheus/Grafana monitoring
-Pseudo-Random → Real Etherlink VRF integration
-No Compliance → AML/audit logging systems
-
-
-
-Contracts Deployed, will adjust and test agent and then frontend.
-
-💰 Mock USDC:           0xC0933C5440c656464D1Eb1F886422bE3466B1459
-💰 Mock USDT:           0xf0f994B4A8dB86A46a1eD4F12263c795b26703Ca
-💎 Mock WETH:           0x959e85561b3cc2E2AE9e9764f55499525E350f56
-🏛️ Mock Lending:        0x9D6E64d6dE2251c1121c1f1f163794EbA5Cf97F1
-🔄 Mock DEX:            0x62FD5Ab8b5b1d11D0902Fce5B937C856301e7bf8
-📊 Mock Staking:        0x5F8E67E37e223c571D184fe3CF4e27cae33E81fF
-📋 Strategy Registry:   0x8fa300Faf24b9B764B0D7934D8861219Db0626e5
-🔍 Risk Oracle:         0xf237E15122DeE41F26bEA9D58f014Fd105b531aC
-
-
-📱 To get test tokens, call faucet() on:
-   • USDC.faucet() - 0xC0933C5440c656464D1Eb1F886422bE3466B1459
-   • USDT.faucet() - 0xf0f994B4A8dB86A46a1eD4F12263c795b26703Ca
-   • WETH.faucet() - 0x959e85561b3cc2E2AE9e9764f55499525E350f56
-
-  yieldAggregator: "0x98464681a7aDb649f6bE8a5c26723bD6c9a631b8",
-  layerZeroBridge: "0x282E9890357F76C46878B6c1EA6D355Ef940E407"
-
-
-🏦 Step 1: Deploying EtherlinkVaultCore (size-optimized)...
-   ✅ EtherlinkVaultCore: 0x15DcEF7A9C2AbFD8a8a53BE9378a3A7B3ac9e5eD
-   📏 Contract deployed successfully (size limit bypassed)
-
-🎰 Step 2: Deploying LotteryExtension...
-   ✅ LotteryExtension: 0xBB28f99330B5fDffd96a1D1D5D6f94345B6e1229
-
-🎲 Step 3: Deploying EtherlinkYieldLottery Strategy...
-   ✅ EtherlinkYieldLottery: 0x98D6d0b9027Db5f035ab9d608D24896C7812455b
-
-
-
-📱 Quick Start Commands:
-1. Get test USDC: mockUSDC.faucet()
-2. Approve vault: mockUSDC.approve("0x15DcEF7A9C2AbFD8a8a53BE9378a3A7B3ac9e5eD", amount)
-3. Deposit: vaultCore.deposit(amount, yourAddress)
-4. Check status: vaultCore.getProtocolStatus()
-
-🤖 Python Agent Setup:
-VAULT_CORE_ADDRESS = "0x15DcEF7A9C2AbFD8a8a53BE9378a3A7B3ac9e5eD"
-LOTTERY_EXTENSION = "0xBB28f99330B5fDffd96a1D1D5D6f94345B6e1229"
-USDC_ADDRESS = "0xC0933C5440c656464D1Eb1F886422bE3466B1459"
-RISK_ORACLE = "0xf237E15122DeE41F26bEA9D58f014Fd105b531aC"
-STRATEGY_REGISTRY = "0x8fa300Faf24b9B764B0D7934D8861219Db0626e5"
-
-   ✅ EmergencySystem: 0x25bc04a49997e25B7482eEcbeB2Ec67740AEd5a6
-
-      ✅ VaultFactory: 0xA2cD4CC41b8DCE00D002Aa4B29050f2d53705400
-   
-
-🎰 Lottery Functions:
-- Vault handles deposits/withdrawals automatically
-- Lottery extension handles prize distribution
-- Manual lottery: lotteryExtension.executeLottery()
-
-💾 Saving all addresses to deployments-modular.json...
-✅ Addresses saved!
-
-🧪 Running basic functionality tests...
-📊 Vault Status:
-   Liquid USDC: 0
-   Prize Pool: 0
-   Strategies: 1
-   Lottery Ready: false
-   Asset Token: 0xC0933C5440c656464D1Eb1F886422bE3466B1459
-   ✅ Vault core is functional!
-   Lottery Prize Pool: 0.0 USDC
-   ✅ Lottery extension is functional!
-
-CONTRACT NOTES:
-NEED TO MAKE VAULT MORE MODULAR FOR CONTRACT SIZE CONSTRAINTS
-Mock protocols, staking, mock lending, mock strategy -> real??
-
-POA:
-
-Etherlink Testnet Protocols/Features:
-LayerZero Bridge - https://docs.etherlink.com/tools/cross‑chain‑comms/
-Plend (lending/borrowing) - https://testnet.plend.finance/
-TachySwap (AMM DEX) - https://defillama.com/protocol/tachyswap - LP token 0xE012...D4240
-Hashleap (payments) -  https://blog.hashleap.io/tagged/web3 
-Omnisea (NFT marketplace) - https://x.com/omnisea/status/1791468775663182032
-Degenerator.wtf (meme-token DEX) - https://xtz.news/meme‑coins/degenerator‑aims‑to‑bring‑memecoin‑supercycle‑to‑tezos‑via‑etherlink
-Bit Hotel (metaverse/gaming) - https://medium.com/etherlink/bit‑hotel‑brings‑social‑first‑gaming‑to‑etherlink‑1dd2fec32464 
-Hanji (CLOB trading platform) - https://docs.hanji.io/
-
-WHEN WORTH IT - BRIDGE FUNDS TO GENERATE YIELD ON OTHER 
-
-Etherlink Mainnet Protocols/Features:
-IguanaDEX (PancakeSwap v3 fork AMM)
-SuperLend (lending)
-Hanji (CLOB trading)
-Uranium.io
-Organicgrowth.wtf (token launches & trading)
-Omnisea (NFT marketplace)?
-Degenerator.wtf (meme DEX)
-Bit Hotel (metaverse/gaming)
-Uniswap v3 (via co-incentive pools)
-
-
-Mempool MEV strategies:
-[to do]
-
-
-# TroveFi: The AI-Powered Yield Raffle Game
-
-### [Live App](https://startling-lolly-07ea9a.netlify.app/)
-### [Backend Agent](./backend)
-### [Demo Video](https://drive.google.com/file/d/1cfjMzw7jGcepljxDOASqhLOUzN8uoLKG/view?usp=sharing)
-   
 **Where financial growth meets the thrill of the win. We are turning passive savings into an active, rewarding experience you can't lose.**
 
-***
+A sophisticated DeFi yield aggregation system that combines:
+- 🎰 **Weekly Lottery System** - Automated yield distribution via lottery
+- 🧠 **ML Risk Assessment** - Advanced strategy risk scoring
+- 📈 **Real-time Market Data** - Multi-source price feeds and volatility analysis
+- 🤖 **AI Agent Management** - LangChain-powered autonomous operations
+- ⚡ **Deployed Strategies** - Live integration with Etherlink testnet
+
+---
 
 ## 💭 The Problem: The Saver's Dilemma
 
@@ -138,356 +21,552 @@ This creates a massive dilemma for everyday people:
 * **The Safe Path:** Earn virtually nothing on your savings.
 * **The Risky Path:** Gamble your savings for a shot at high rewards.
 
-This is the market gap. People want the security of savings combined with the excitement and upside of a lottery, without the risk of loss.
+**Our solution:** The first AI-managed, prize-linked savings protocol on Etherlink. We've created a **positive-sum game** where users can't lose.
 
-***
+---
 
-## 🚀 Our Solution: The AI-Powered, No-Loss Savings Game
+## 🌟 Key Features
 
-**Prize Savings** is the first AI-managed, prize-linked savings protocol on Etherlink. We've created a **positive-sum game** where users can't lose. By depositing funds, you are not only saving your money securely but also automatically entering a weekly draw to win the entire prize pool generated from the collective yield.
+### Weekly Lottery System
+- **Automated Execution**: Every Monday at 12:00 UTC
+- **Deposit-Weighted Selection**: Larger deposits = higher win probability
+- **Minimum Prize Pool**: 10 USDC threshold for execution
+- **Provably Fair Randomness**: On-chain random winner selection
+- **No-Loss Guarantee**: Your principal is always safe
 
-Think of us as an **intelligent, gamified bank account**. Your money is always safe, always yours, but now it also gives you a weekly shot at a better financial future.
+### ML-Powered Risk Assessment
+- **Real-time Risk Scoring**: 0-1 scale with confidence levels
+- **Multi-factor Analysis**: Smart contract, liquidity, market, operational risks
+- **Market-Adjusted Scoring**: Volatility-sensitive risk calculations
+- **Portfolio Optimization**: Diversification and allocation recommendations
 
-### How It Works in 4 Simple Steps
+### Advanced Market Intelligence
+- **Multi-source Price Feeds**: CoinGecko, Binance, CoinMarketCap, OKX
+- **Volatility Analysis**: Market condition detection and adjustment
+- **Risk-adjusted Strategy Selection**: Dynamic allocation based on market state
+- **Real-time Monitoring**: Continuous market and strategy surveillance
+
+### Deployed Strategy Integration
+- **SimpleSuperlendStrategy**: Conservative lending protocol simulation
+- **SimplePancakeSwapStrategy**: DEX liquidity provision with fee generation
+- **EtherlinkYieldLottery**: Direct lottery yield contribution
+
+---
+
+## 🏗️ Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    FastAPI Server                           │
+│  ┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐│
+│  │   AI Agent      │ │  Price Feeds    │ │  Risk API       ││
+│  │  (LangChain)    │ │   Manager       │ │   (ML Model)    ││
+│  └─────────────────┘ └─────────────────┘ └─────────────────┘│
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│                 Etherlink Testnet                           │
+│  ┌─────────────┐ ┌─────────────┐ ┌─────────────────────────┐│
+│  │ Vault Core  │ │   Lottery   │ │      Strategies         ││
+│  │             │ │ Extension   │ │                         ││
+│  │             │ │             │ │ • Superlend             ││
+│  │             │ │             │ │ • PancakeSwap           ││
+│  │             │ │             │ │ • Lottery Yield         ││
+│  └─────────────┘ └─────────────┘ └─────────────────────────┘│
+└─────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 📊 Deployed Contracts (Etherlink Testnet)
+
+### Core Infrastructure
+```
+Vault Core:          0xB8B55df1B5AE01e6ABAf141F0D3CAC64303eFfB2
+Lottery Extension:   0x779992660Eb4eb9C17AC38D4ABb79D07F0a1d374
+Strategy Registry:   0x4Fd69BD63Ad6f2688239B496bbAF89390572693d
+Risk Oracle:         0x3e833aF4870F35e7F8c63f5E6CA1D884c305bc2e
+```
+
+### Token Contracts
+```
+Mock USDC:           0xc2E9E01F16764F8e63d5113Ec01b13cc968dB5Dc
+Mock WETH:           0x9aD2A76D1f940C2eedFE7aBF5b55e6943a90cC41
+```
+
+### Strategy Contracts
+```
+Superlend Strategy:  0x1864adaBc679B62Ae69A838309E5fB9435675D1A
+PancakeSwap Strategy: 0x888e307EC9DeF2e038d545251f7b7F6c944b96d5
+```
+
+---
+
+## 🚀 Quick Start
+
+### 1. Prerequisites
+
+- **Python 3.8+** 
+- **Node.js** (for any contract interactions)
+- **Git**
+- **API Keys** (OpenAI, CoinMarketCap)
+- **Ethereum Wallet** (for agent private key)
+
+### 2. Installation
+
+```bash
+# Clone the repository
+git clone <your-repo-url>
+cd enhanced-etherlink-vault
+
+# Run automated setup
+python setup.py
+```
+
+### 3. Configuration
+
+```bash
+# Copy environment template
+cp .env.example .env
+
+# Edit with your actual values
+nano .env  # or use your preferred editor
+```
+
+**Required Configuration:**
+```bash
+# Essential keys
+AGENT_PRIVATE_KEY=your_64_character_private_key
+OPENAI_API_KEY=sk-your_openai_api_key
+COINMARKETCAP_API_KEY=your_cmc_api_key
+
+# Network (already configured for Etherlink testnet)
+ETHERLINK_RPC_URL=https://node.ghostnet.etherlink.com
+ETHERLINK_CHAIN_ID=128123
+```
+
+### 4. Start the System
+
+```bash
+# Option 1: Direct execution
+python enhanced_etherlink_agent.py
+
+# Option 2: Use startup script
+./start.sh  # Linux/Mac
+start.bat   # Windows
+
+# Option 3: Docker
+docker-compose up -d
+```
+
+---
+
+## 📋 API Endpoints
+
+Once running, access these endpoints at `http://localhost:8000`:
+
+### Core Operations
+- `GET /` - System overview and status
+- `GET /health` - Comprehensive health check
+- `GET /comprehensive-status` - Complete vault and strategy status
+- `POST /invoke-agent` - Direct AI agent interaction
+
+### Lottery Management
+- `GET /lottery-status` - Current lottery information
+- `POST /execute-lottery-cycle` - Manual lottery execution
+- `POST /simulate-yield` - Test yield generation
+
+### Strategy Operations
+- `POST /harvest-strategies` - Harvest from all strategies
+- `POST /deploy-to-strategy` - Deploy funds optimally
+- `GET /rebalancing-analysis` - Strategy optimization
+
+### Risk & Market Intelligence
+- `GET /risk-assessment` - ML-powered risk analysis
+- `GET /market-analysis` - Real-time market data and trends
+
+### Interactive Documentation
+- `GET /docs` - Swagger UI
+- `GET /redoc` - ReDoc documentation
+
+---
+
+## 🎯 Usage Examples
+
+### 1. Check System Status
+```bash
+curl http://localhost:8000/comprehensive-status
+```
+
+### 2. Get Market Analysis
+```bash
+curl http://localhost:8000/market-analysis
+```
+
+### 3. Execute Lottery Cycle
+```bash
+curl -X POST http://localhost:8000/execute-lottery-cycle
+```
+
+### 4. Deploy Funds to Optimal Strategy
+```bash
+curl -X POST http://localhost:8000/deploy-to-strategy \
+  -H "Content-Type: application/json" \
+  -d '{"amount_usdc": 100, "strategy_preference": "auto"}'
+```
+
+### 5. AI Agent Interaction
+```bash
+curl -X POST http://localhost:8000/invoke-agent \
+  -H "Content-Type: application/json" \
+  -d '{"command": "Check lottery status and execute if ready"}'
+```
+
+---
+
+## 🧠 AI Agent Commands
+
+The AI agent understands natural language commands:
+
+### Lottery Operations
+- `"Check if it's time for the weekly lottery"`
+- `"Execute the lottery cycle if conditions are met"`
+- `"Show me the current lottery status and participants"`
+
+### Strategy Management
+- `"Harvest yield from all strategies"`
+- `"Deploy 50 USDC to the safest strategy"`
+- `"Rebalance the portfolio based on current risk scores"`
+
+### Risk Assessment
+- `"Perform ML risk assessment on all strategies"`
+- `"Show me which strategies are high risk right now"`
+- `"Check market conditions and adjust strategy allocations"`
+
+### Market Analysis
+- `"Get current cryptocurrency prices and market trends"`
+- `"Analyze market volatility and recommend actions"`
+- `"Compare strategy performance with market conditions"`
+
+---
+
+## 💰 How It Works: The 4-Step Process
 
 | Step                | Action                                                                                                                     | Technical Implementation                                                                                                                                     |
 | :------------------ | :------------------------------------------------------------------------------------------------------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **1. Deposit & Pool** | Users deposit USDC into a single, secure, non-custodial smart contract vault on Etherlink.                                      | Users interact with the React frontend, which calls the `deposit()` function on the `Vault.sol` contract.                                                      |
-| **2. AI Generates Prize** | Our AI agent simulates yield generation, creating and funding the weekly prize pool.                                         | The agent's backend calls `simulate_yield_harvest_and_deposit()`, which mints MockUSDC and deposits it into the `EtherlinkVrfYieldStrategy.sol` contract.               |
-| **3. Provably Fair Draw** | The agent triggers the weekly lottery, using **Etherlink's Native VRF** for a cryptographically secure and random winner selection. | The agent calls `trigger_lottery_draw()`, which executes the `harvestStrategy()` function on the `Vault.sol` contract, initiating the VRF draw in the strategy. |
-| **4. Win or Save** | One lucky winner receives the entire prize pool. Everyone else keeps 100% of their initial deposit.                      | The `EtherlinkVrfYieldStrategy` contract automatically transfers the prize to the winner's address. All other users' shares in the `Vault` remain untouched.        |
+| **2. AI Generates Prize** | Our AI agent simulates yield generation, creating and funding the weekly prize pool.                                         | The agent's backend calls `simulate_yield_harvest_and_deposit()`, which mints MockUSDC and deposits it into the lottery system.               |
+| **3. Provably Fair Draw** | The agent triggers the weekly lottery, using **Etherlink's Native VRF** for a cryptographically secure and random winner selection. | The agent calls `execute_weekly_lottery_cycle()`, which executes the lottery function on the smart contracts. |
+| **4. Win or Save** | One lucky winner receives the entire prize pool. Everyone else keeps 100% of their initial deposit.                      | The lottery contract automatically transfers the prize to the winner's address. All other users' deposits remain untouched.        |
 
-***
+---
 
-## 🏛️ The Philosophy: Why A "Positive-Sum Game"?
-
-Finance is too often a zero-sum game. Lotteries are a *negative-sum* game by design. **Etherlink Prize Savings** is built on the principle of a **positive-sum game**:
-
-* **The Winner:** Receives a prize far greater than they could have earned alone.
-* **The Participants:** Lose nothing. Their savings remain intact and they benefit from a fun, engaging experience.
-* **The Ecosystem:** Grows as more users are onboarded to a safe, compelling Web3 product, increasing overall liquidity and activity on Etherlink.
-
-This philosophy is embodied by our AI agent: it works for the collective good, optimizing the prize potential while guaranteeing the safety of the individual's capital.
-
-***
-
-## 🔑 Key Features & Technical Innovation
-
-We've built a sophisticated system that blends cutting-edge AI with robust blockchain security.
+## 🔑 Key Technical Features
 
 ### 🏦 No-Loss Savings Vault & ERC4626 Architecture
-* **What it is:** Your principal deposit is always safe. Only the generated yield is contributed to the prize pool.
-* **Technical Detail:** Our `Vault.sol` contract is designed based on the principles of the **ERC4626 Tokenized Vault Standard**. This ensures a clear separation between user deposits (represented as shares) and the yield-generating strategies, making it impossible for the prize mechanism to touch user principal.
+- **What it is:** Your principal deposit is always safe. Only the generated yield is contributed to the prize pool.
+- **Technical Detail:** Our vault contract ensures a clear separation between user deposits (represented as shares) and the yield-generating strategies, making it impossible for the prize mechanism to touch user principal.
 
 ### 🤖 AI-Powered Autonomous Agent
-* **What it is:** The protocol is managed by a sophisticated backend agent that handles all operations, from funding the prize pool to triggering draws and assessing risk.
-* **Technical Detail:** The agent is built in Python using **FastAPI** for the server, **LangChain** for structuring LLM interactions, and **OpenAI's GPT-4o-mini** as the reasoning engine. It can interpret high-level commands (e.g., "run the weekly lottery cycle") and execute a multi-step, on-chain plan. This grounds intelligent automation in a transparent, verifiable system.
+- **What it is:** The protocol is managed by a sophisticated backend agent that handles all operations, from funding the prize pool to triggering draws and assessing risk.
+- **Technical Detail:** The agent is built in Python using **FastAPI** for the server, **LangChain** for structuring LLM interactions, and **OpenAI's GPT-4o-mini** as the reasoning engine.
 
-### 🎲 Provably Fair Lottery with Etherlink Native VRF
-* **What it is:** We use Etherlink's built-in Verifiable Random Function for cryptographically secure and auditable randomness, ensuring every lottery draw is transparent and fair.
-* **Technical Detail:** Our `EtherlinkVrfYieldStrategy.sol` contract directly integrates with Etherlink's native VRF contract at `0x0000000000000000000000010000000000000001`. This avoids reliance on external oracles, providing a higher level of security and decentralization.
+### 🎲 Provably Fair Lottery System
+- **What it is:** We use cryptographically secure randomness for transparent and fair lottery draws.
+- **Technical Detail:** The lottery system uses deposit-weighted probability where larger deposits increase win chances, but everyone has a fair shot at the prize.
 
 ### 📊 ML-Driven Risk Management
-* **What it is:** The agent uses a machine learning model to assess the risk of potential DeFi strategies before deploying capital.
-* **Technical Detail:** The agent loads a pre-trained `.joblib` anomaly detection model. The `assess_strategy_risk()` tool can analyze a strategy's on-chain metrics (if on Ethereum) to generate a risk score, preventing the agent from allocating funds to high-risk protocols.
-
-### 🔗 FCL & EVM Dual-Compatibility
-* **What it is:** A seamless user experience for everyone, whether they use a native Etherlink wallet or a standard EVM wallet like MetaMask.
-* **Technical Detail:** Our React frontend uses `wagmi` for EVM wallet connections and `@onEtherlink/fcl` for native Etherlink integration. We've built custom hooks (`useFCLStatus`) to detect the user's connection type and provide a tailored UI, showcasing the power of Etherlink's EVM compatibility.
-
-***
-
-## 🏗️ Technical Architecture
-
-Our system is composed of three core, interconnected components designed for security, scalability, and intelligence.
-
----
-
-```
-┌───────────────────────────────────────────────┐
-│               🌐 Frontend (React & Next.js)   │
-│-----------------------------------------------│
-│  🖥️  User Interface                           │
-│  🔗  Wallet Integration (Wagmi / FCL Hooks)  │
-└───────────────────────────────────────────────┘
-             │
-             ▼
-┌───────────────────────────────────────────────┐
-│        🔷 Etherlink EVM Testnet (Smart Contracts)  │
-│-----------------------------------------------│
-│  🏦 Vault.sol (Manage deposits/withdrawals)   │
-│  🎯 EtherlinkVrfYieldStrategy.sol (Prize pool + VRF)│
-│  💵 MockUSDC.sol (ERC20 token)                 │
-│  🎲 Etherlink Native VRF (Randomness)              │
-└───────────────────────────────────────────────┘
-             │
-             ▼
-┌───────────────────────────────────────────────┐
-│     🤖 AI Agent Backend (Python + FastAPI)    │
-│-----------------------------------------------│
-│  🚪 API Endpoints                             │
-│  🧠 LangChain Agent Executor                 │
-│  🔍 OpenAI GPT-4o-mini                        │
-│  📊 ML Risk Model                             │
-│  ⛓️  Web3.py                                  │
-└───────────────────────────────────────────────┘
-```
-
----
-
-### 🔄 **How It Works (At a Glance)**
-
-📥 **Step 1:** User deposits funds on the frontend → triggers Wagmi/FCL Hook → calls `Vault.sol`.
-
-📤 **Step 2:** `Vault.sol` deposits into `EtherlinkVrfYieldStrategy.sol`.
-
-🎲 **Step 3:** Strategy requests randomness from Etherlink Native VRF for lottery outcomes.
-
-🤖 **Step 4:** AI Agent Backend:
-
-* Receives triggers (e.g., run lottery, harvest yield).
-* Decides optimal actions via GPT-4o-mini + ML Risk Model.
-* Executes blockchain transactions through Web3.py.
-
-
-### Core Contracts (Deployed on Etherlink Testnet)
-
-| Contract              | Address                                      | Description                                                           |
-| :-------------------- | :------------------------------------------- | :-------------------------------------------------------------------- |
-| **MockUSDC**          | `0x4edbDC8Ed8Ca935513A2F06e231EE42FB6ed1d15` | An ERC20 token used for deposits and prize pools.                     |
-| **Lottery Vault**     | `0xBaE8f26eDa40Ab353A34ce38F8917318d226318F` | The main vault where users deposit and withdraw funds.                |
-| **Etherlink VRF Strategy** | `0xf5DC9ca0518B45C3E372c3bC7959a4f3d1B18901` | The strategy that holds the prize pool and interacts with Etherlink's VRF. |
-
----
-
-## 🔬 Under the Hood: A Modular & Scalable Contract Framework
-
-While the current testnet deployment uses a focused set of contracts to power the core prize-savings game, we have built a comprehensive and modular smart contract system designed for rapid, secure expansion. This architecture is the foundation for our long-term vision and is ready for future deployment.
-
-This forward-thinking framework includes several key components:
-
-### 1. The `VaultFactory.sol`
-* **Purpose:** This factory contract is designed to deploy new, isolated `Vault` instances permissionlessly.
-* **Vision:** This enables the creation of a multi-vault ecosystem where different communities, or even individuals, can launch their own prize-savings games with unique assets or configurations, all managed by our AI agent framework.
-
-### 2. Pluggable Yield Strategies (`Strategies.sol`)
-* **Purpose:** We've designed a generic strategy interface that can interact with any external DeFi protocol simply by defining its function selectors.
-* **Vision:** This makes our system incredibly adaptable. Integrating a new yield source becomes a simple matter of deploying a new strategy adapter, not re-writing the core vault logic. To prove this model, we have already built production-ready implementations for major protocols:
-    * **`AaveV3Strategy.sol`**: A complete strategy for earning yield on Aave.
-    * **`CompoundV3Strategy.sol`**: A complete strategy for earning yield on Compound.
-
-### 3. User Experience & Automation Contracts
-* **`AutoDepositProxy.sol`**: This helper contract is designed to enhance user experience by allowing for one-click deposits. For example, funds bridged from another chain can be sent directly to this proxy, which then automatically deposits them into the vault on behalf of the user, saving gas and steps.
-
-This modular design is what allows our **Future Roadmap** to be so ambitious. The foundation is already built to support real multi-protocol and multi-chain yield generation in a secure and scalable way.
-
+- **What it is:** The agent uses a machine learning model to assess the risk of potential DeFi strategies before deploying capital.
+- **Technical Detail:** The agent loads a pre-trained `.joblib` anomaly detection model to analyze strategy metrics and generate risk scores.
 
 ---
 
 ## 📊 Key Differentiators
 
-We're not just another DeFi protocol. We're creating a new category of financial product.
-
 | Solution                  | Your Return                         | Management                     | Risk of Loss        | Gamified  |
 | :------------------------ | :---------------------------------- | :----------------------------- | :------------------ | :-------- |
-| **Etherlink Prize Savings**    | **Principal + Chance to Win Yield** | **Fully Passive (AI-Managed)** | **🔥 None**         | **✅ Yes** |
+| **Enhanced Etherlink Vault**    | **Principal + Chance to Win Yield** | **Fully Passive (AI-Managed)** | **🔥 None**         | **✅ Yes** |
 | Traditional Savings       | Principal + \~1% APY                | Passive                        | None                | ❌ No      |
 | Lotteries / Gambling      | -100% (Usually)                     | Active                         | Very High           | ✅ Yes     |
 | Yield Aggregators (Yearn) | Principal + Yield                   | Passive                        | Smart Contract Risk | ❌ No      |
 
 ---
 
-## 💰 Business Model & Go-To-Market
+## 🔧 Configuration Options
 
-Our revenue model is simple, transparent, and fully aligned with our users' success.
+### Lottery Configuration
+```python
+@dataclass
+class LotteryConfig:
+    weekly_cycle_days: int = 7
+    min_prize_pool: float = 10.0  # USDC
+    lottery_execution_hour: int = 12  # UTC
+    lottery_execution_day: int = 0  # Monday
+```
 
-* **Primary Revenue Stream: Performance Fee**
-    * We will take a small percentage (e.g., 10%) of the **generated yield only**.
-    * **Example:** If the prize pool for a week is $1,000, the winner receives $900 and the protocol receives $100 to fund operations and growth.
-    * **The Guarantee:** If there is no yield, there are no fees. We only earn when our users win.
+### Risk Management
+```python
+@dataclass
+class RiskConfig:
+    max_strategy_allocation: float = 0.4  # 40% max
+    emergency_risk_threshold: float = 0.8  # 80%
+    rebalance_risk_threshold: float = 0.6  # 60%
+```
+
+### Yield Management
+```python
+@dataclass
+class YieldConfig:
+    harvest_interval_hours: int = 12
+    min_harvest_amount: float = 1.0  # USDC
+    auto_compound_enabled: bool = True
+```
+
+---
+
+## 🛠️ Production Roadmap
+
+### 🚨 URGENT (For Production)
+- [ ] **Mock DeFi Protocols → Real Aave/Compound/Curve integration**
+- [ ] **Simulated Cross-Chain → Real LayerZero bridge execution**
+- [ ] **Hardcoded Market Data → Real-time DeFiLlama/CoinGecko APIs**
+- [ ] **Basic Security → Multi-sig wallets, timelocks, daily limits**
+
+### 🔧 NEXT PRIORITY
+- [ ] **In-Memory Storage → PostgreSQL database**
+- [ ] **Console Logging → Prometheus/Grafana monitoring**
+- [ ] **Pseudo-Random → Real Etherlink VRF integration**
+- [ ] **No Compliance → AML/audit logging systems**
+
+### 🌐 Etherlink Protocol Integrations
+
+#### Testnet Protocols Available
+- **LayerZero Bridge** - https://docs.etherlink.com/tools/cross‑chain‑comms/
+- **Plend (lending/borrowing)** - https://testnet.plend.finance/
+- **TachySwap (AMM DEX)** - https://defillama.com/protocol/tachyswap
+- **Hashleap (payments)** - https://blog.hashleap.io/tagged/web3
+- **Omnisea (NFT marketplace)** - https://x.com/omnisea/status/1791468775663182032
+- **Degenerator.wtf (meme-token DEX)**
+- **Bit Hotel (metaverse/gaming)**
+- **Hanji (CLOB trading platform)** - https://docs.hanji.io/
+
+#### Mainnet Protocols (Future Integration)
+- **IguanaDEX** (PancakeSwap v3 fork AMM)
+- **SuperLend** (lending)
+- **Hanji** (CLOB trading)
+- **Uranium.io**
+- **Organicgrowth.wtf** (token launches & trading)
+- **Uniswap v3** (via co-incentive pools)
+
+---
+
+## 📈 Monitoring & Analytics
+
+### Built-in Monitoring
+- **Real-time Health Checks**: `/health` endpoint
+- **Performance Metrics**: Gas usage, transaction success rates
+- **Risk Monitoring**: Continuous strategy risk assessment
+- **Market Surveillance**: Price volatility and trend analysis
+
+### Logging
+```bash
+# View real-time logs
+tail -f logs/vault_manager.log
+
+# Check specific events
+grep "LOTTERY" logs/vault_manager.log
+grep "ERROR" logs/vault_manager.log
+```
+
+### Backup & Recovery
+- **Automatic Backups**: Model and configuration backups
+- **State Recovery**: Transaction history and risk assessments
+- **Model Versioning**: ML model updates and rollbacks
+
+---
+
+## 🔒 Security Best Practices
+
+### Private Key Management
+- ✅ Use a dedicated wallet for the agent
+- ✅ Never commit private keys to version control
+- ✅ Regularly rotate API keys
+- ✅ Monitor wallet balance and transactions
+
+### API Security
+- ✅ Secure your server with HTTPS in production
+- ✅ Implement rate limiting
+- ✅ Monitor API usage and set alerts
+- ✅ Use environment variables for all secrets
+
+### Smart Contract Security
+- ✅ Contracts are deployed and tested on Etherlink testnet
+- ✅ Emergency functions available for risk mitigation
+- ✅ Multi-signature capabilities for governance
+- ✅ Regular security assessments
+
+---
+
+## 🧪 Testing
+
+### Run System Tests
+```bash
+# Test risk assessment
+python ml-risk/risk_api.py
+
+# Test price feeds
+python price_feeds.py
+
+# Test full system
+python setup.py
+```
+
+### Manual Testing
+```bash
+# Check individual components
+curl http://localhost:8000/health
+curl http://localhost:8000/lottery-status
+curl http://localhost:8000/market-analysis
+```
+
+---
+
+## 🔍 Troubleshooting
+
+### Common Issues
+
+#### 1. "Risk model not available"
+```bash
+# Reinitialize ML model
+cd ml-risk
+python risk_api.py
+```
+
+#### 2. "Price feeds not available"
+```bash
+# Check internet connection and API keys
+python price_feeds.py
+```
+
+#### 3. "Transaction failed"
+```bash
+# Check wallet balance and gas prices
+# Verify network connectivity
+```
+
+#### 4. "Contract not found"
+```bash
+# Verify contract addresses in .env
+# Check Etherlink testnet connectivity
+```
+
+### Debug Mode
+```bash
+# Enable debug logging
+export LOG_LEVEL=DEBUG
+python enhanced_etherlink_agent.py
+```
+
+---
+
+## 💰 Business Model & Revenue
+
+### Revenue Model
+- **Performance Fee**: Small percentage (e.g., 10%) of generated yield only
+- **Example**: If prize pool is $1,000, winner gets $900, protocol gets $100
+- **Guarantee**: If no yield, no fees. We only earn when users win.
 
 ### Go-To-Market Strategy
-* **Phase 1: Launch on Etherlink Testnet & Build Community (Current)**
-    * Engage with the Etherlink community through social media, developer forums, and hackathons.
-    * Gather user feedback to refine the product and user experience.
-* **Phase 2: Mainnet Launch with Real Yield Strategies**
-    * Integrate with audited, blue-chip protocols on Etherlink (e.g., Increment Finance) to generate real yield.
-    * Launch a marketing campaign focused on the "no-loss" value proposition to attract initial liquidity.
-* **Phase 3: Scale & Expand**
-    * Introduce new features like premium prize tiers, team-based savings games, and NFT-based rewards.
-    * Explore multi-chain yield optimization, using the AI agent to find the best risk-adjusted returns across the entire Web3 ecosystem.
+1. **Phase 1**: Build community on Etherlink testnet
+2. **Phase 2**: Mainnet launch with real yield strategies
+3. **Phase 3**: Scale with premium features and multi-chain expansion
 
-***
+---
 
-## 🗺️ Future Development & Roadmap
+## 🗺️ Future Development
 
-This project provides a robust foundation. The next phase will focus on transitioning from a simulated environment to a live, fully autonomous, yield-bearing protocol.
+### Real Yield Integration
+- Integrate with Etherlink protocols (Plend, TachySwap, etc.)
+- Cross-chain yield optimization via LayerZero
+- Advanced strategy allocation algorithms
 
-* **Implement Real Yield Strategies on Etherlink:**
-    * Integrate with established Etherlink protocols like **Increment Finance** or **Etherlinkswap** to generate real yield from user deposits.
-    * Develop and deploy new Cadence-based yield strategies to leverage Etherlink's unique capabilities for gas efficiency and composability.
-* **Enhance the ML Risk Model:**
-    * Train the risk assessment model on historical data from actual Etherlink DeFi protocols.
-    * Build a data pipeline to continuously fetch on-chain data to keep the model updated and relevant.
-    * Allow the agent to dynamically retrain the model based on new information and market conditions.
-* **Expand Agent's Autonomous Capabilities:**
-    * Enable the agent to autonomously decide *when* and *how much* capital to allocate to different strategies based on risk/reward calculations.
-    * Implement logic for the agent to automatically rebalance the portfolio if a strategy's risk profile changes.
-    * Use **Account Linking** on Etherlink to allow the agent to securely manage vault operations with clear permissions and user-controlled recovery mechanisms, creating a truly secure autonomous system.
-* **UX Enhancements with Cadence:**
-    * Leverage Cadence to introduce features impossible on traditional EVM chains, such as **sponsored/batched transactions** for a gasless user experience and **walletless onboarding** for mainstream adoption.
+### Enhanced AI Capabilities
+- Autonomous strategy selection and rebalancing
+- Real-time risk monitoring and emergency responses
+- Predictive market analysis and positioning
 
-***
+### User Experience
+- Gasless transactions via account abstraction
+- Mobile app with push notifications
+- Social features and team-based savings games
 
-## ❓ Addressing Key Questions (FAQ)
+---
+
+## ❓ FAQ
 
 #### "Is this just another lottery?"
-No. It's a savings protocol first. Traditional lotteries require you to spend and lose your money for a chance to win. With us, your deposit is never spent. You are essentially getting a free lottery ticket every week, just for saving your money. The prize is created from the *yield*, not the principal.
+No. It's a savings protocol first. Your deposit is never spent. You get a free lottery ticket every week just for saving money. The prize comes from yield, not principal.
 
 #### "If I don't win, do I lose anything?"
-Absolutely not. This is the core of our "no-loss" guarantee. If you don't win, your initial deposit remains untouched and is available for you to withdraw at any time.
+Absolutely not. This is our "no-loss" guarantee. Your initial deposit remains untouched and withdrawable at any time.
 
 #### "Is my money safe?"
-Security is our highest priority.
-1.  **Non-Custodial:** You always maintain full ownership of your funds. We can never access your deposited principal.
-2.  **No-Loss Guarantee:** The smart contracts are architected to ensure only generated yield is moved to the prize pool. Your deposit is isolated and safe.
-3.  **Future-Proofing:** When real yield strategies are implemented, they will be restricted to a whitelist of heavily audited, battle-tested protocols, and our AI will continuously monitor for risks.
+Yes. The system is non-custodial, your principal is isolated from the prize mechanism, and we use battle-tested smart contract patterns.
 
-***
+---
 
-## 🔧 Quick Start & Installation
+## 🤝 Contributing
 
-This project contains a full-stack application with smart contracts, an AI backend, and a React frontend.
+### Development Setup
+```bash
+# Install development dependencies
+pip install -r requirements-dev.txt
 
-### Prerequisites
-* Node.js v18+
-* Python 3.9+
-* An EVM-compatible wallet (e.g., MetaMask) funded on the Etherlink Testnet.
+# Run tests
+pytest tests/
 
-### Installation & Setup
-1.  **Clone the Repository:**
-    ```bash
-    git clone https://github.com/TroveFi/submission-repo
-    cd backend
-    ```
+# Code formatting
+black .
+flake8 .
+```
 
-2.  **Set Up AI Backend:**
-    ```bash
-    cd backend
-    python3 -m venv venv
-    source venv/bin/activate  # On Windows: venv\Scripts\activate
-    pip install -r requirements.txt
-    cp .env.example .env
-    ```
-    * Fill in your `AGENT_PRIVATE_KEY` and `OPENAI_API_KEY` in the `.env` file.
+---
 
-3.  **Set Up Frontend:**
-    ```bash
-    cd <frontend-folder>
-    npm install
-    ```
+## 📄 License
 
-### Running the Application
-1.  **Start the AI Agent Backend:**
-    ```bash
-    cd <backend-folder>
-    uvicorn main:app --reload
-    ```
-    The agent is now running on `http://localhost:8000`.
+This project is licensed under the MIT License - see the LICENSE file for details.
 
-2.  **Start the Frontend:**
-    ```bash
-    cd <frontend-folder>
-    npm run dev
-    ```
-    Access the user interface at `http://localhost:3000`.
+---
 
-***
+## 🆘 Support
 
-## 🤖 Agent Demo Guide: A Full Operational Cycle
+### Getting Help
+- 📖 Read this documentation thoroughly
+- 🔍 Check the troubleshooting section
+- 📊 Review logs in `./logs/` directory
+- 🧪 Run system tests with `python setup.py`
 
-You can interact with the live agent using these `curl` commands to simulate a full operational week.
+### Reporting Issues
+When reporting issues, please include:
+- System specifications
+- Complete error messages
+- Steps to reproduce
+- Relevant log entries
+- Configuration (without secrets)
 
-1.  **Check System Health**
-    * **What it does:** Confirms the agent is online, connected to the Etherlink blockchain, and can communicate with our smart contracts.
-    * **Command:**
-        ```bash
-        curl http://localhost:8000/health
-        ```
+---
 
-2.  **Generate the Prize Pool**
-    * **What it does:** Simulates yield generation. The agent mints 150 USDC and deposits it into the strategy contract to create this week's prize.
-    * **Command:**
-        ```bash
-        curl -X POST http://localhost:8000/generate-yield \
-             -H "Content-Type: application/json" \
-             -d '{"amount_usdc": 150.0}'
-        ```
+## 🎉 Congratulations!
 
-3.  **Check the Status**
-    * **What it does:** Shows the prize pool is now funded and ready for the draw.
-    * **Command:**
-        ```bash
-        curl http://localhost:8000/enhanced-status
-        ```
+You now have a fully functional Enhanced Etherlink Vault Manager with:
+- ✅ Weekly automated lottery system
+- ✅ ML-powered risk assessment
+- ✅ Real-time market intelligence
+- ✅ Production-ready deployment
+- ✅ Comprehensive monitoring
 
-4.  **Trigger the Lottery Draw**
-    * **What it does:** Instructs the agent to trigger the lottery, calling the smart contract that uses Etherlink's native VRF to select a winner.
-    * **Command:**
-        ```bash
-        curl -X POST http://localhost:8000/trigger-lottery
-        ```
+**Ready to revolutionize DeFi yield farming on Etherlink! 🚀**
 
-5.  **Confirm the Winner**
-    * **What it does:** Confirms the draw is complete and shows the winner's address.
-    * **Command:**
-        ```bash
-        curl http://localhost:8000/enhanced-status
-        ```
-
-6.  **Ask the AI for a Strategy**
-    * **What it does:** Demonstrates the agent's intelligence. It analyzes the current state and uses GPT-4 to recommend a strategic course of action.
-    * **Command:**
-        ```bash
-        curl -X POST http://localhost:8000/ai-strategy \
-             -H "Content-Type: application/json" \
-             -d '{"command": "What should I do next after successfully running the lottery?"}'
-        ```
-
-7.  **Run an Emergency Risk Check**
-    * **What it does:** Showcases the agent's security focus by running an emergency risk assessment across all strategies.
-    * **Command:**
-        ```bash
-        curl http://localhost:8000/emergency-status
-        ```
-
-***
-
-## 🌐 The Vision: Onboarding the Next Billion Users to Web3
-
-Our vision is to make saving and wealth creation accessible, fun, and rewarding for everyone. We believe **Etherlink Prize Savings** can become the default savings account for the next generation of internet users—a place where your money is not only safe but is also constantly working to give you a shot at a better financial future.
-
-By abstracting away the complexities of DeFi with a powerful AI and a simple, engaging interface, we are building a "killer app" that solves a real-world problem for a global audience, right here on Etherlink.
-
-
-
-
-
-
-
- --- CONTRACT DEPLOYMENT SUMMARY --- 
-------------------------------------
-   Mock USDC Token:     0x4edbDC8Ed8Ca935513A2F06e231EE42FB6ed1d15
-   Vault Factory:       0xa87fe90A07DE4E10398F2203A9F3Bd8b98Cf902D
-   Lottery Vault:       0xBaE8f26eDa40Ab353A34ce38F8917318d226318F
-   Etherlink VRF Strategy:   0xf5DC9ca0518B45C3E372c3bC7959a4f3d1B18901
-------------------------------------
-
-VRF strategy added and configured to Vault
-
-🔮 VRF Integration Details:
-   The Etherlink VRF Strategy uses the Cadence Arch contract at:
-   0x0000000000000000000000010000000000000001
-   This provides secure, on-chain randomness.
-
+---
 

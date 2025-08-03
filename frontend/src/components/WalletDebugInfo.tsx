@@ -8,20 +8,37 @@ export function WalletDebugInfo() {
   if (!isConnected) return null
 
   return (
-    <Card className="border border-blue-200 bg-blue-50">
+    <Card className="border border-gray-200 shadow-sm">
       <CardHeader>
-        <CardTitle className="flex items-center space-x-2 text-sm">
-          <Info className="w-4 h-4 text-blue-600" />
-          <span>Wallet Debug Info</span>
+        <CardTitle className="flex items-center space-x-2">
+          <Info className="w-4 h-4" />
+          Wallet Debug Info
         </CardTitle>
       </CardHeader>
-      <CardContent className="text-xs space-y-2">
-        <div><strong>Address:</strong> {address}</div>
-        <div><strong>Connector ID:</strong> {connector?.id}</div>
-        <div><strong>Connector Name:</strong> {connector?.name}</div>
-        <div><strong>Connector Type:</strong> {connector?.type}</div>
-        <div><strong>Chain ID:</strong> {chainId}</div>
-        <div><strong>Is Connected:</strong> {isConnected ? 'Yes' : 'No'}</div>
+      <CardContent className="space-y-2">
+        <p className="text-sm">
+          <strong>Address:</strong> {address}
+        </p>
+        <p className="text-sm">
+          <strong>Connector ID:</strong> {connector?.id}
+        </p>
+        <p className="text-sm">
+          <strong>Connector Name:</strong> {connector?.name}
+        </p>
+        <p className="text-sm">
+          <strong>Connector Type:</strong> {connector?.type}
+        </p>
+        <p className="text-sm">
+          <strong>Chain ID:</strong> {chainId}
+        </p>
+        <p className="text-sm">
+          <strong>Is Connected:</strong> {isConnected ? 'Yes' : 'No'}
+        </p>
+        {chainId === 128123 && (
+          <p className="text-sm text-green-600">
+            ✅ Connected to Etherlink Testnet
+          </p>
+        )}
       </CardContent>
     </Card>
   )

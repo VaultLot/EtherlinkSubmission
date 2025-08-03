@@ -4,13 +4,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { useAccount, useReadContract, useWriteContract, useConnectors } from 'wagmi'
+import { useAccount, useReadContract, useWriteContract } from 'wagmi'
 import { CONTRACTS, VAULT_ABI, MOCK_USDC_ABI } from '@/lib/contracts'
 import { formatTokenAmount, parseTokenAmount } from '@/lib/utils'
 import { toast } from 'sonner'
 import { Loader2, DollarSign, Coins, Shield, Users, Wallet } from 'lucide-react'
-import { useFCLStatus } from '@/hooks/useFCL'
-import { writeEVMContract } from '@/lib/utils/evmTransactions'
 
 export function DepositWithdraw() {
   const { address, connector } = useAccount()
@@ -31,11 +29,6 @@ export function DepositWithdraw() {
       }
     }
   })
-  const { isFCLConnected, hasFullFCLAccess } = useFCLStatus()
-
-  // Determine which connector is being used
-  const isMetaMaskConnected = connector?.id === 'metaMask' || connector?.name === 'MetaMask'
-  const isFCLWagmiConnected = connector?.name === 'FCL' || connector?.id === 'fcl'
 
   // Debug logging
   useEffect(() => {
@@ -45,13 +38,8 @@ export function DepositWithdraw() {
         name: connector.name,
         type: connector.type
       })
-      console.log('Connection type:', {
-        isMetaMaskConnected,
-        isFCLWagmiConnected,
-        isFCLConnected
-      })
     }
-  }, [connector, isMetaMaskConnected, isFCLWagmiConnected, isFCLConnected])
+  }, [connector])
 
   // Read user's USDC balance
   const { data: usdcBalance, refetch: refetchUsdcBalance } = useReadContract({
@@ -99,23 +87,12 @@ export function DepositWithdraw() {
       console.log('Contract:', CONTRACTS.MOCK_USDC)
       console.log('Amount:', maxAmount.toString())
 
-      // Use EVM-specific transaction for Flow wallets connected via MetaMask button
-      if (connector.name?.includes('Flow') || connector.id === 'io.lilico') {
-        await writeEVMContract({
-          address: CONTRACTS.MOCK_USDC,
-          abi: MOCK_USDC_ABI,
-          functionName: 'approve',
-          args: [CONTRACTS.VAULT, maxAmount],
-          account: address,
-        })
-      } else {
-        await writeContract({
-          address: CONTRACTS.MOCK_USDC,
-          abi: MOCK_USDC_ABI,
-          functionName: 'approve',
-          args: [CONTRACTS.VAULT, maxAmount],
-        })
-      }
+      await writeContract({
+        address: CONTRACTS.MOCK_USDC,
+        abi: MOCK_USDC_ABI,
+        functionName: 'approve',
+        args: [CONTRACTS.VAULT, maxAmount],
+      })
 
       toast.success(`Approval transaction submitted from ${address.slice(0, 6)}...${address.slice(-4)}`)
       
@@ -143,23 +120,12 @@ export function DepositWithdraw() {
       console.log('Contract:', CONTRACTS.VAULT)
       console.log('Amount:', amount.toString())
 
-      // Use EVM-specific transaction for Flow wallets connected via MetaMask button
-      if (connector.name?.includes('Flow') || connector.id === 'io.lilico') {
-        await writeEVMContract({
-          address: CONTRACTS.VAULT,
-          abi: VAULT_ABI,
-          functionName: 'deposit',
-          args: [amount, address],
-          account: address,
-        })
-      } else {
-        await writeContract({
-          address: CONTRACTS.VAULT,
-          abi: VAULT_ABI,
-          functionName: 'deposit',
-          args: [amount, address],
-        })
-      }
+      await writeContract({
+        address: CONTRACTS.VAULT,
+        abi: VAULT_ABI,
+        functionName: 'deposit',
+        args: [amount, address],
+      })
 
       toast.success(`Deposit transaction submitted from ${address.slice(0, 6)}...${address.slice(-4)}`)
       
@@ -190,23 +156,12 @@ export function DepositWithdraw() {
       console.log('Contract:', CONTRACTS.VAULT)
       console.log('Amount:', amount.toString())
 
-      // Use EVM-specific transaction for Flow wallets connected via MetaMask button
-      if (connector.name?.includes('Flow') || connector.id === 'io.lilico') {
-        await writeEVMContract({
-          address: CONTRACTS.VAULT,
-          abi: VAULT_ABI,
-          functionName: 'redeem',
-          args: [amount, address, address],
-          account: address,
-        })
-      } else {
-        await writeContract({
-          address: CONTRACTS.VAULT,
-          abi: VAULT_ABI,
-          functionName: 'redeem',
-          args: [amount, address, address],
-        })
-      }
+      await writeContract({
+        address: CONTRACTS.VAULT,
+        abi: VAULT_ABI,
+        functionName: 'redeem',
+        args: [amount, address, address],
+      })
 
       toast.success(`Withdrawal transaction submitted from ${address.slice(0, 6)}...${address.slice(-4)}`)
       
@@ -237,25 +192,12 @@ export function DepositWithdraw() {
       console.log('Amount:', amount.toString())
       console.log('Expected recipient:', address)
 
-      // Use EVM-specific transaction for Flow wallets connected via MetaMask button
-      if (connector.name?.includes('Flow') || connector.id === 'io.lilico') {
-        console.log('🔥 FORCING EVM TRANSACTION FOR FLOW WALLET')
-        await writeEVMContract({
-          address: CONTRACTS.MOCK_USDC,
-          abi: MOCK_USDC_ABI,
-          functionName: 'faucet',
-          args: [amount],
-          account: address,
-        })
-      } else {
-        console.log('🔥 USING STANDARD TRANSACTION FOR NON-FLOW WALLET')
-        await writeContract({
-          address: CONTRACTS.MOCK_USDC,
-          abi: MOCK_USDC_ABI,
-          functionName: 'faucet',
-          args: [amount],
-        })
-      }
+      await writeContract({
+        address: CONTRACTS.MOCK_USDC,
+        abi: MOCK_USDC_ABI,
+        functionName: 'faucet',
+        args: [],
+      })
 
       toast.success(`Faucet transaction submitted from ${address.slice(0, 6)}...${address.slice(-4)}`)
       
@@ -299,7 +241,7 @@ export function DepositWithdraw() {
                 Connect Your Wallet
               </h3>
               <p className="text-gray-500 text-sm">
-                Connect your wallet to start saving and earning with Flow Prize Savings
+                Connect your wallet to start saving and earning with Etherlink Prize Savings
               </p>
             </div>
 
@@ -308,10 +250,10 @@ export function DepositWithdraw() {
                 <Shield className="w-6 h-6 text-blue-600" />
                 <div className="text-left">
                   <p className="text-sm font-medium text-blue-800">
-                    Recommended: Flow FCL
+                    Secure & Fast
                   </p>
                   <p className="text-xs text-blue-600">
-                    Full Flow ecosystem integration with EVM compatibility
+                    Low fees on Etherlink testnet
                   </p>
                 </div>
               </div>
@@ -325,13 +267,6 @@ export function DepositWithdraw() {
   const needsApproval = depositAmount && allowance !== undefined &&
     parseTokenAmount(depositAmount, 6) > allowance
 
-  // Get connection type for display
-  const getConnectionType = () => {
-    if (isMetaMaskConnected) return 'MetaMask (Flow EVM)'
-    if (isFCLWagmiConnected) return 'Flow FCL'
-    return connector?.name || 'Unknown'
-  }
-
   return (
     <Card className="border border-gray-200 shadow-sm">
       <CardHeader>
@@ -341,22 +276,14 @@ export function DepositWithdraw() {
             <span>Deposit & Withdraw</span>
           </div>
           <div className="flex items-center space-x-2 text-sm">
-            {isMetaMaskConnected ? (
-              <div className="flex items-center space-x-1 text-green-600">
-                <Wallet className="w-4 h-4" />
-                <span>EVM Active</span>
-              </div>
-            ) : hasFullFCLAccess ? (
-              <div className="flex items-center space-x-1 text-blue-600">
-                <Shield className="w-4 h-4" />
-                <span>FCL Active</span>
-              </div>
-            ) : null}
+            <div className="flex items-center space-x-1 text-green-600">
+              <Wallet className="w-4 h-4" />
+              <span>Connected</span>
+            </div>
           </div>
         </CardTitle>
-        {/* Connection status indicator */}
         <div className="text-xs text-gray-500">
-          Connected via: {getConnectionType()}
+          Connected via: {connector?.name || 'Unknown'}
         </div>
       </CardHeader>
       <CardContent>
@@ -416,7 +343,7 @@ export function DepositWithdraw() {
               {isFauceting ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Getting USDC via {getConnectionType()}...
+                  Getting Test USDC...
                 </>
               ) : (
                 'Get Test USDC (Faucet)'
@@ -457,25 +384,15 @@ export function DepositWithdraw() {
               </Button>
             </div>
 
-            <div className={`${isMetaMaskConnected ? 'bg-green-50 border-green-200' : hasFullFCLAccess ? 'bg-blue-50 border-blue-200' : 'bg-purple-50 border-purple-200'} border rounded-lg p-3`}>
-              <div className={`flex items-center space-x-2 text-sm ${isMetaMaskConnected ? 'text-green-700' : hasFullFCLAccess ? 'text-blue-700' : 'text-purple-700'}`}>
-                {isMetaMaskConnected ? <Wallet className="w-4 h-4" /> : <Shield className="w-4 h-4" />}
+            <div className="bg-green-50 border-green-200 border rounded-lg p-3">
+              <div className="flex items-center space-x-2 text-sm text-green-700">
+                <Shield className="w-4 h-4" />
                 <span className="font-medium">
-                  {isMetaMaskConnected 
-                    ? 'Direct EVM Connection Active'
-                    : hasFullFCLAccess 
-                      ? 'Powered by Flow Native VRF' 
-                      : 'Enhanced with Flow FCL Available'
-                  }
+                  Powered by Etherlink
                 </span>
               </div>
-              <p className={`text-xs ${isMetaMaskConnected ? 'text-green-600' : hasFullFCLAccess ? 'text-blue-600' : 'text-purple-600'} mt-1`}>
-                {isMetaMaskConnected
-                  ? 'Transactions are processed directly through your Flow EVM address via MetaMask.'
-                  : hasFullFCLAccess 
-                    ? 'Your deposits earn yield automatically while you\'re eligible for weekly prize draws using cryptographically secure randomness.'
-                    : 'Connect with Flow FCL for enhanced Flow ecosystem integration and better user experience.'
-                }
+              <p className="text-xs text-green-600 mt-1">
+                Your deposits earn yield automatically while you're eligible for weekly prize draws using secure smart contracts.
               </p>
             </div>
           </TabsContent>

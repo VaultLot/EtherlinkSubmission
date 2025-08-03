@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useReadContract, useAccount } from 'wagmi'
-import { CONTRACTS, VAULT_ABI, FLOW_VRF_YIELD_STRATEGY_ABI } from '@/lib/contracts'
+import { CONTRACTS, VAULT_ABI, LOTTERY_EXTENSION_ABI } from '@/lib/contracts'
 import { formatTokenAmount, formatAddress } from '@/lib/utils'
 import { TrendingUp, Trophy, Clock, Users } from 'lucide-react'
 import { useEffect, useState } from 'react'
@@ -21,33 +21,31 @@ export function Dashboard() {
     functionName: 'totalAssets',
   })
 
-  // Read Current Prize Pool from FlowVrfYieldStrategy contract
-  const { data: prizePool, refetch: refetchPrizePool } = useReadContract({
-    address: CONTRACTS.FLOW_VRF_YIELD_STRATEGY,
-    abi: FLOW_VRF_YIELD_STRATEGY_ABI,
-    functionName: 'getBalance',
+  // Read Current Prize Pool from LotteryExtension contract
+  const { data: lotteryInfo, refetch: refetchLotteryInfo } = useReadContract({
+    address: CONTRACTS.LOTTERY_EXTENSION,
+    abi: LOTTERY_EXTENSION_ABI,
+    functionName: 'getLotteryInfo',
   })
 
-  // Read Previous Winner from FlowVrfYieldStrategy contract
+  // Read Previous Winner from LotteryExtension contract
   const { data: lastWinner, refetch: refetchLastWinner } = useReadContract({
-    address: CONTRACTS.FLOW_VRF_YIELD_STRATEGY,
-    abi: FLOW_VRF_YIELD_STRATEGY_ABI,
+    address: CONTRACTS.LOTTERY_EXTENSION,
+    abi: LOTTERY_EXTENSION_ABI,
     functionName: 'lastWinner',
   })
 
-  // Read total deposited amount from strategy
+  // Read total deposited amount from lottery extension
   const { data: totalDeposited } = useReadContract({
-    address: CONTRACTS.FLOW_VRF_YIELD_STRATEGY,
-    abi: FLOW_VRF_YIELD_STRATEGY_ABI,
-    functionName: 'totalDeposited',
+    address: CONTRACTS.LOTTERY_EXTENSION,
+    abi: LOTTERY_EXTENSION_ABI,
+    functionName: 'totalLotteryDeposits',
   })
 
-  // Check if strategy is paused
-  const { data: isPaused } = useReadContract({
-    address: CONTRACTS.FLOW_VRF_YIELD_STRATEGY,
-    abi: FLOW_VRF_YIELD_STRATEGY_ABI,
-    functionName: 'paused',
-  })
+  // Parse lottery info
+  const prizePool = lotteryInfo ? lotteryInfo[0] : BigInt(0) // prizePool
+  const isLotteryReady = lotteryInfo ? lotteryInfo[2] : false // lotteryReady
+  const timeUntilLottery = lotteryInfo ? lotteryInfo[3] : BigInt(0) // timeUntilLottery
 
   // Countdown timer effect - Set to next Friday 8 PM UTC
   useEffect(() => {
@@ -101,12 +99,12 @@ export function Dashboard() {
   useEffect(() => {
     const interval = setInterval(() => {
       refetchTotalAssets()
-      refetchPrizePool()
+      refetchLotteryInfo()
       refetchLastWinner()
     }, 30000)
 
     return () => clearInterval(interval)
-  }, [refetchTotalAssets, refetchPrizePool, refetchLastWinner])
+  }, [refetchTotalAssets, refetchLotteryInfo, refetchLastWinner])
 
   const stats = [
     {
@@ -116,7 +114,7 @@ export function Dashboard() {
       color: 'text-green-600',
       bgColor: 'bg-green-50',
       description: 'Total USDC deposited in the vault',
-      status: isPaused ? 'Paused' : 'Active'
+      status: 'Active'
     },
     {
       title: 'Current Prize Pool',
@@ -136,7 +134,8 @@ export function Dashboard() {
       bgColor: 'bg-blue-50',
       description: 'Every Friday at 8 PM UTC',
       subtitle: timeLeft.days === 0 && timeLeft.hours < 1 ?
-        `${timeLeft.minutes}m ${timeLeft.seconds}s` : undefined
+        `${timeLeft.minutes}m ${timeLeft.seconds}s` : undefined,
+      ready: isLotteryReady
     },
     {
       title: 'Previous Winner',
@@ -148,7 +147,7 @@ export function Dashboard() {
       bgColor: 'bg-purple-50',
       description: 'Address of the last lottery winner',
       link: lastWinner && lastWinner !== '0x0000000000000000000000000000000000000000'
-        ? `https://evm-testnet.flowscan.io/address/${lastWinner}` : undefined
+        ? `https://testnet.explorer.etherlink.com/address/${lastWinner}` : undefined
     }
   ]
 
@@ -184,6 +183,11 @@ export function Dashboard() {
                   Status: {stat.status}
                 </div>
               )}
+              {stat.ready && (
+                <div className="text-sm font-medium text-orange-600">
+                  🎲 Lottery Ready!
+                </div>
+              )}
               <p className="text-xs text-gray-500">
                 {stat.description}
               </p>
@@ -194,7 +198,7 @@ export function Dashboard() {
                   rel="noopener noreferrer"
                   className="text-xs text-blue-500 hover:text-blue-700 underline"
                 >
-                  View on FlowScan
+                  View on Etherlink Explorer
                 </a>
               )}
             </div>
