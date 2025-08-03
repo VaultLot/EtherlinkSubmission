@@ -1,6 +1,6 @@
 # Etherlink AI-Powered No Loss Lottery 🚀
 
-[App](https://fomo-insurance-cpjq.vercel.app/)
+[App](https://etherlink-lottery.vercel.app/)
 
 [Demo](https://drive.google.com/file/d/1rNjqpwXA8Txw5OAd1kdovzjITRc5Byct/view?usp=sharing)
 
