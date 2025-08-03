@@ -2,7 +2,7 @@ import { config } from "@onflow/fcl";
 
 config({
   // Application details
-  "app.detail.title": "Flow Prize Savings",
+  "app.detail.title": "Etherlink Prize Savings",
   "app.detail.icon": "https://cdn.sanity.io/images/kts928pd/production/fb3dd18e5938bd78cca39c1a4df02eba65f424df-731x731.png",
 
   // Flow Access Node for Testnet
