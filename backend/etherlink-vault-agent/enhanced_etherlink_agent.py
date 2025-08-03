@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Advanced Etherlink Vault Manager Agent
-Sophisticated AI agent with ML risk assessment, cross-chain yield optimization, and automated lottery management
+Enhanced Etherlink Vault Manager Agent - Production Ready
+Sophisticated AI agent for weekly yield lottery with ML risk assessment and deployed strategies
 """
 
 import os
@@ -12,7 +12,7 @@ from typing import Dict, List, Optional, Tuple
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
 from web3 import Web3
-from web3.middleware import geth_poa_middleware
+from web3.middleware import ExtraDataToPOAMiddleware
 from web3.exceptions import ContractLogicError
 from fastapi import FastAPI, BackgroundTasks
 from pydantic import BaseModel
@@ -23,10 +23,12 @@ from langchain.tools import tool
 import requests
 import numpy as np
 from dataclasses import dataclass
+import schedule
+import threading
 
 # Import risk assessment
-import sys
-sys.path.append('./ml-risk')
+import os, sys
+sys.path.append(os.path.join(os.path.dirname(__file__), 'ml-risk'))
 try:
     from risk_api import RiskAssessmentAPI
     RISK_MODEL_AVAILABLE = True
@@ -35,11 +37,23 @@ except ImportError as e:
     print(f"⚠️ Risk model not available: {e}")
     RISK_MODEL_AVAILABLE = False
 
+# Import price feeds
+try:
+    from price_feeds import PriceFeedManager
+    PRICE_FEEDS_AVAILABLE = True
+    print("✅ Price feeds imported successfully")
+except ImportError as e:
+    print(f"⚠️ Price feeds not available: {e}")
+    PRICE_FEEDS_AVAILABLE = False
+
 # ==============================================================================
-# 1. ENHANCED CONFIGURATION AND SETUP
+# 1. PRODUCTION CONFIGURATION WITH DEPLOYED CONTRACTS
 # ==============================================================================
 
-load_dotenv()
+
+load_dotenv()  
+
+AGENT_PRIVATE_KEY = os.getenv("AGENT_PRIVATE_KEY", "")
 
 # --- Network Configuration ---
 ETHERLINK_RPC_URL = os.getenv("ETHERLINK_RPC_URL", "https://node.ghostnet.etherlink.com")
@@ -47,55 +61,69 @@ ETHERLINK_CHAIN_ID = int(os.getenv("ETHERLINK_CHAIN_ID", "128123"))
 AGENT_PRIVATE_KEY = os.getenv("AGENT_PRIVATE_KEY")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
-# --- Core Contract Addresses ---
-VAULT_CORE_ADDRESS = "0x15DcEF7A9C2AbFD8a8a53BE9378a3A7B3ac9e5eD"
-LOTTERY_EXTENSION = "0xBB28f99330B5fDffd96a1D1D5D6f94345B6e1229"
-USDC_ADDRESS = "0xC0933C5440c656464D1Eb1F886422bE3466B1459"
-RISK_ORACLE = "0xf237E15122DeE41F26bEA9D58f014Fd105b531aC"
-STRATEGY_REGISTRY = "0x8fa300Faf24b9B764B0D7934D8861219Db0626e5"
-YIELD_AGGREGATOR = "0x98464681a7aDb649f6bE8a5c26723bD6c9a631b8"
-LAYER_ZERO_BRIDGE = "0x282E9890357F76C46878B6c1EA6D355Ef940E407"
+# --- Price Feed API Keys ---
+COINMARKETCAP_API_KEY = os.getenv("COINMARKETCAP_API_KEY")
 
-# --- Mock Protocol Addresses ---
-MOCK_LENDING = "0x9D6E64d6dE2251c1121c1f1f163794EbA5Cf97F1"
-MOCK_DEX = "0x62FD5Ab8b5b1d11D0902Fce5B937C856301e7bf8"
-MOCK_STAKING = "0x5F8E67E37e223c571D184fe3CF4e27cae33E81fF"
-EMERGENCY_SYSTEM = "0x25bc04a49997e25B7482eEcbeB2Ec67740AEd5a6"
+# --- DEPLOYED CONTRACT ADDRESSES (Updated to match your deployment) ---
+VAULT_CORE_ADDRESS = "0xB8B55df1B5AE01e6ABAf141F0D3CAC64303eFfB2"
+LOTTERY_EXTENSION = "0x779992660Eb4eb9C17AC38D4ABb79D07F0a1d374"
+USDC_ADDRESS = "0xc2E9E01F16764F8e63d5113Ec01b13cc968dB5Dc"
+WETH_ADDRESS = "0x9aD2A76D1f940C2eedFE7aBF5b55e6943a90cC41"
+RISK_ORACLE = "0x3e833aF4870F35e7F8c63f5E6CA1D884c305bc2e"
+STRATEGY_REGISTRY = "0x4Fd69BD63Ad6f2688239B496bbAF89390572693d"
 
-# --- Token Addresses ---
-USDT_ADDRESS = "0xf0f994B4A8dB86A46a1eD4F12263c795b26703Ca"
-WETH_ADDRESS = "0x959e85561b3cc2E2AE9e9764f55499525E350f56"
+# --- DEPLOYED STRATEGY ADDRESSES ---
+SIMPLE_SUPERLEND_STRATEGY = "0x1864adaBc679B62Ae69A838309E5fB9435675D1A"
+SIMPLE_PANCAKE_STRATEGY = "0x888e307EC9DeF2e038d545251f7b7F6c944b96d5"
+LOTTERY_YIELD_STRATEGY = "0x3dC0390c2C4Aad9b342Dac7e6741662d52963577"
 
-# --- Cross-Chain Configuration ---
-SUPPORTED_CHAINS = {
-    "ethereum": {"id": 101, "name": "Ethereum", "rpc": os.getenv("ETHEREUM_RPC_URL")},
-    "arbitrum": {"id": 110, "name": "Arbitrum", "rpc": os.getenv("ARBITRUM_RPC_URL")},
-    "polygon": {"id": 109, "name": "Polygon", "rpc": os.getenv("POLYGON_RPC_URL")},
-    "etherlink": {"id": 30302, "name": "Etherlink", "rpc": ETHERLINK_RPC_URL}
+# --- Strategy Names (as registered in vault) ---
+STRATEGY_NAMES = {
+    "simple_superlend_usdc": SIMPLE_SUPERLEND_STRATEGY,
+    "simple_pancake_usdc_weth": SIMPLE_PANCAKE_STRATEGY,
+    "lottery_yield": LOTTERY_YIELD_STRATEGY
 }
 
 # --- Web3 Setup ---
 w3 = Web3(Web3.HTTPProvider(ETHERLINK_RPC_URL))
-w3.middleware_onion.inject(geth_poa_middleware, layer=0)
+w3.middleware_onion.inject(ExtraDataToPOAMiddleware, layer=0)
 
 # --- Agent Account Setup ---
 agent_account = w3.eth.account.from_key(AGENT_PRIVATE_KEY)
 print(f"🤖 Enhanced Agent Wallet: {agent_account.address}")
 
-# --- Advanced Configuration ---
+# --- Weekly Lottery Configuration ---
 @dataclass
-class VaultConfig:
-    max_risk_tolerance: int = 6000  # 60%
-    min_yield_threshold: int = 200  # 2%
-    rebalance_threshold: int = 500  # 5%
-    lottery_interval_days: int = 7
-    emergency_threshold: int = 8000  # 80%
-    max_single_strategy_allocation: int = 4000  # 40%
-    cross_chain_enabled: bool = True
-    auto_rebalance_enabled: bool = True
-    gas_optimization_enabled: bool = True
+class LotteryConfig:
+    weekly_cycle_days: int = 7
+    min_prize_pool: float = 10.0  # 10 USDC minimum
+    max_participants: int = 1000
+    yield_distribution_ratio: float = 0.8  # 80% to winner, 20% to participants
+    min_deposit_for_lottery: float = 1.0  # 1 USDC minimum
+    lottery_execution_hour: int = 12  # Execute at noon UTC
+    lottery_execution_day: int = 0  # Monday = 0
 
-config = VaultConfig()
+# --- Risk Configuration ---
+@dataclass
+class RiskConfig:
+    max_strategy_allocation: float = 0.4  # 40% max per strategy
+    emergency_risk_threshold: float = 0.8  # 80% risk score
+    rebalance_risk_threshold: float = 0.6  # 60% risk score
+    min_diversification_strategies: int = 2
+    risk_assessment_interval_hours: int = 6
+
+# --- Yield Configuration ---
+@dataclass
+class YieldConfig:
+    harvest_interval_hours: int = 12
+    min_harvest_amount: float = 1.0  # 1 USDC
+    auto_compound_enabled: bool = True
+    yield_distribution_enabled: bool = True
+    performance_fee_pct: float = 0.05  # 5% performance fee
+
+lottery_config = LotteryConfig()
+risk_config = RiskConfig()
+yield_config = YieldConfig()
 
 # --- Risk Model Setup ---
 if RISK_MODEL_AVAILABLE:
@@ -108,445 +136,509 @@ if RISK_MODEL_AVAILABLE:
 else:
     risk_api = None
 
-# --- Load ABIs ---
-def load_abi(filename):
-    """Loads a contract ABI with multiple fallback paths."""
-    possible_paths = [
-        os.path.join("abi", filename),
-        os.path.join("contracts", "abi", filename),
-        os.path.join("..", "abi", filename),
-        filename
-    ]
-    
-    for path in possible_paths:
-        try:
-            if os.path.exists(path):
-                with open(path, "r") as f:
-                    data = json.load(f)
-                    return data.get("abi", data) if isinstance(data, dict) else data
-        except (FileNotFoundError, json.JSONDecodeError):
-            continue
-    
-    # Return minimal ABI if none found
-    print(f"⚠️ Could not find {filename}, using minimal ABI")
-    return [
-        {"type": "function", "name": "getBalance", "outputs": [{"type": "uint256"}]},
-        {"type": "function", "name": "deposit", "inputs": [{"type": "uint256"}, {"type": "address"}]},
-        {"type": "function", "name": "withdraw", "inputs": [{"type": "uint256"}, {"type": "address"}, {"type": "address"}]}
-    ]
+# --- Price Feed Manager Setup ---
+if PRICE_FEEDS_AVAILABLE:
+    try:
+        price_manager = PriceFeedManager(coinmarketcap_api_key=COINMARKETCAP_API_KEY)
+        print("✅ Price feed manager initialized")
+    except Exception as e:
+        price_manager = None
+        print(f"⚠️ Price feed manager initialization failed: {e}")
+else:
+    price_manager = None
 
-# Load all ABIs
-vault_core_abi = load_abi("EtherlinkVaultCore.json")
-lottery_abi = load_abi("LotteryExtension.json")
-usdc_abi = load_abi("MockUSDC.json")
-risk_oracle_abi = load_abi("RiskOracle.json")
-strategy_registry_abi = load_abi("StrategyRegistry.json")
-yield_aggregator_abi = load_abi("YieldAggregator.json")
-bridge_abi = load_abi("LayerZeroBridge.json")
+# --- Load Minimal ABIs ---
+def load_abi(filename):
+    """Loads contract ABI with fallback to minimal interface."""
+    minimal_abis = {
+        "vault": [
+            {"type": "function", "name": "getProtocolStatus", "outputs": [{"type": "uint256"}, {"type": "uint256"}, {"type": "address"}, {"type": "uint256"}, {"type": "uint256"}, {"type": "uint256"}, {"type": "bool"}, {"type": "uint256"}]},
+            {"type": "function", "name": "getNamedStrategies", "outputs": [{"type": "string[]"}, {"type": "address[]"}]},
+            {"type": "function", "name": "deployToNamedStrategy", "inputs": [{"type": "string"}, {"type": "uint256"}, {"type": "bytes"}]},
+            {"type": "function", "name": "harvestAllStrategies", "outputs": [{"type": "uint256"}]},
+            {"type": "function", "name": "totalAssets", "outputs": [{"type": "uint256"}]},
+            {"type": "function", "name": "balanceOf", "inputs": [{"type": "address"}], "outputs": [{"type": "uint256"}]},
+            {"type": "function", "name": "deposit", "inputs": [{"type": "uint256"}, {"type": "address"}], "outputs": [{"type": "uint256"}]},
+            {"type": "function", "name": "withdraw", "inputs": [{"type": "uint256"}, {"type": "address"}, {"type": "address"}], "outputs": [{"type": "uint256"}]}
+        ],
+        "lottery": [
+            {"type": "function", "name": "getLotteryInfo", "outputs": [{"type": "uint256"}, {"type": "address"}, {"type": "bool"}, {"type": "uint256"}]},
+            {"type": "function", "name": "getDepositors", "outputs": [{"type": "address[]"}]},
+            {"type": "function", "name": "getUserDepositInfo", "inputs": [{"type": "address"}], "outputs": [{"type": "uint256"}, {"type": "uint256"}]},
+            {"type": "function", "name": "executeLottery", "outputs": [{"type": "address"}, {"type": "uint256"}]},
+            {"type": "function", "name": "depositYieldForLottery", "inputs": [{"type": "uint256"}]},
+            {"type": "function", "name": "canExecuteLottery", "outputs": [{"type": "bool"}]}
+        ],
+        "usdc": [
+            {"type": "function", "name": "balanceOf", "inputs": [{"type": "address"}], "outputs": [{"type": "uint256"}]},
+            {"type": "function", "name": "approve", "inputs": [{"type": "address"}, {"type": "uint256"}], "outputs": [{"type": "bool"}]},
+            {"type": "function", "name": "transfer", "inputs": [{"type": "address"}, {"type": "uint256"}], "outputs": [{"type": "bool"}]},
+            {"type": "function", "name": "mint", "inputs": [{"type": "address"}, {"type": "uint256"}], "outputs": [{"type": "bool"}]}
+        ],
+        "strategy": [
+            {"type": "function", "name": "getStrategyInfo", "outputs": [{"type": "string"}, {"type": "address"}, {"type": "address"}, {"type": "uint256"}, {"type": "uint256"}, {"type": "uint256"}, {"type": "bool"}]},
+            {"type": "function", "name": "getBalance", "outputs": [{"type": "uint256"}]},
+            {"type": "function", "name": "harvest", "inputs": [{"type": "bytes"}]},
+            {"type": "function", "name": "execute", "inputs": [{"type": "uint256"}, {"type": "bytes"}]},
+            {"type": "function", "name": "paused", "outputs": [{"type": "bool"}]}
+        ],
+        "registry": [
+            {"type": "function", "name": "getOptimalStrategy", "inputs": [{"type": "uint256"}, {"type": "uint256"}, {"type": "bool"}, {"type": "uint16"}], "outputs": [{"type": "bytes32"}, {"type": "uint256"}, {"type": "uint256"}, {"type": "bool"}]},
+            {"type": "function", "name": "getStrategyByName", "inputs": [{"type": "string"}, {"type": "uint16"}], "outputs": [{"type": "address"}, {"type": "uint16"}, {"type": "string"}, {"type": "string"}, {"type": "uint256"}, {"type": "uint256"}, {"type": "uint256"}, {"type": "uint256"}, {"type": "uint256"}, {"type": "bool"}, {"type": "bool"}, {"type": "uint256"}, {"type": "bytes"}]},
+            {"type": "function", "name": "updateRealTimeMetrics", "inputs": [{"type": "bytes32"}, {"type": "uint256"}, {"type": "uint256"}, {"type": "uint256"}, {"type": "uint256"}, {"type": "uint256"}, {"type": "bool"}, {"type": "bytes32"}]}
+        ]
+    }
+    
+    try:
+        with open(filename, "r") as f:
+            data = json.load(f)
+            return data.get("abi", data) if isinstance(data, dict) else data
+    except:
+        # Return appropriate minimal ABI
+        if "vault" in filename.lower():
+            return minimal_abis["vault"]
+        elif "lottery" in filename.lower():
+            return minimal_abis["lottery"]
+        elif "usdc" in filename.lower() or "token" in filename.lower():
+            return minimal_abis["usdc"]
+        elif "strategy" in filename.lower():
+            return minimal_abis["strategy"]
+        elif "registry" in filename.lower():
+            return minimal_abis["registry"]
+        else:
+            return minimal_abis["vault"]
 
 # Create contract objects
-vault_core = w3.eth.contract(address=VAULT_CORE_ADDRESS, abi=vault_core_abi)
-lottery_extension = w3.eth.contract(address=LOTTERY_EXTENSION, abi=lottery_abi)
-usdc_contract = w3.eth.contract(address=USDC_ADDRESS, abi=usdc_abi)
-risk_oracle = w3.eth.contract(address=RISK_ORACLE, abi=risk_oracle_abi)
-strategy_registry = w3.eth.contract(address=STRATEGY_REGISTRY, abi=strategy_registry_abi)
-yield_aggregator = w3.eth.contract(address=YIELD_AGGREGATOR, abi=yield_aggregator_abi)
-bridge_contract = w3.eth.contract(address=LAYER_ZERO_BRIDGE, abi=bridge_abi)
+vault_core = w3.eth.contract(address=VAULT_CORE_ADDRESS, abi=load_abi("vault"))
+lottery_extension = w3.eth.contract(address=LOTTERY_EXTENSION, abi=load_abi("lottery"))
+usdc_contract = w3.eth.contract(address=USDC_ADDRESS, abi=load_abi("usdc"))
+strategy_registry = w3.eth.contract(address=STRATEGY_REGISTRY, abi=load_abi("registry"))
 
-print("✅ Enhanced configuration loaded with ML risk management")
+# Strategy contracts
+superlend_strategy = w3.eth.contract(address=SIMPLE_SUPERLEND_STRATEGY, abi=load_abi("strategy"))
+pancake_strategy = w3.eth.contract(address=SIMPLE_PANCAKE_STRATEGY, abi=load_abi("strategy"))
+lottery_strategy = w3.eth.contract(address=LOTTERY_YIELD_STRATEGY, abi=load_abi("strategy"))
+
+print("✅ Production configuration loaded with deployed contracts")
 
 # ==============================================================================
-# 2. ADVANCED TRANSACTION HANDLING
+# 2. ENHANCED TRANSACTION HANDLING
 # ==============================================================================
 
-def send_transaction(tx, description="Transaction"):
-    """Enhanced transaction handler with better error reporting."""
-    try:
-        # Estimate gas if not provided
-        if 'gas' not in tx:
-            tx['gas'] = w3.eth.estimate_gas(tx)
-        
-        # Sign and send
-        signed_tx = w3.eth.account.sign_transaction(tx, agent_account.key)
-        
-        # Handle different Web3.py versions
-        raw_tx = getattr(signed_tx, 'rawTransaction', getattr(signed_tx, 'raw_transaction', signed_tx))
-        tx_hash = w3.eth.send_raw_transaction(raw_tx)
-        
-        print(f"⏳ {description}: {tx_hash.hex()}")
-        receipt = w3.eth.wait_for_transaction_receipt(tx_hash, timeout=120)
-        
-        if receipt.status == 1:
-            print(f"✅ {description} confirmed in block {receipt.blockNumber}")
-            return {"success": True, "receipt": receipt, "tx_hash": tx_hash.hex()}
-        else:
-            print(f"❌ {description} failed")
-            return {"success": False, "error": "Transaction failed"}
+def send_transaction(tx, description="Transaction", retry_count=3):
+    """Enhanced transaction handler with retry logic."""
+    for attempt in range(retry_count):
+        try:
+            # Update gas price for current market conditions
+            tx['gasPrice'] = int(w3.eth.gas_price * 1.1)  # 10% above current
             
-    except ContractLogicError as e:
-        print(f"❌ {description} reverted: {e}")
-        return {"success": False, "error": f"Contract logic error: {e}"}
-    except Exception as e:
-        print(f"❌ {description} error: {e}")
-        return {"success": False, "error": str(e)}
+            # Estimate gas if not provided
+            if 'gas' not in tx:
+                try:
+                    estimated_gas = w3.eth.estimate_gas(tx)
+                    tx['gas'] = int(estimated_gas * 1.2)  # 20% buffer
+                except:
+                    tx['gas'] = 2_000_000  # Default high gas limit
+            
+            # Update nonce
+            tx['nonce'] = w3.eth.get_transaction_count(agent_account.address)
+            
+            # Sign and send
+            signed_tx = w3.eth.account.sign_transaction(tx, agent_account.key)
+            raw_tx = getattr(signed_tx, 'rawTransaction', getattr(signed_tx, 'raw_transaction', signed_tx))
+            tx_hash = w3.eth.send_raw_transaction(raw_tx)
+            
+            print(f"⏳ {description} (attempt {attempt + 1}): {tx_hash.hex()}")
+            receipt = w3.eth.wait_for_transaction_receipt(tx_hash, timeout=120)
+            
+            if receipt.status == 1:
+                print(f"✅ {description} confirmed in block {receipt.blockNumber}")
+                return {"success": True, "receipt": receipt, "tx_hash": tx_hash.hex(), "gas_used": receipt.gasUsed}
+            else:
+                print(f"❌ {description} failed in attempt {attempt + 1}")
+                if attempt == retry_count - 1:
+                    return {"success": False, "error": "Transaction failed after retries"}
+                time.sleep(5)  # Wait before retry
+                
+        except Exception as e:
+            print(f"❌ {description} error (attempt {attempt + 1}): {e}")
+            if attempt == retry_count - 1:
+                return {"success": False, "error": str(e)}
+            time.sleep(5)  # Wait before retry
 
 # ==============================================================================
-# 3. ADVANCED AGENT TOOLS WITH ML INTEGRATION
+# 3. ENHANCED AGENT TOOLS FOR DEPLOYED STRATEGIES
 # ==============================================================================
 
 @tool
 def get_comprehensive_vault_status() -> str:
     """
-    Gets comprehensive vault status including ML risk analysis, yield optimization, and lottery state.
+    Gets complete status of the deployed vault and all strategies.
     """
     print("Tool: get_comprehensive_vault_status")
     try:
-        # Basic vault metrics
+        # Get vault protocol status
         try:
-            vault_status = vault_core.functions.getProtocolStatus().call()
-            liquid_usdc, prize_pool, last_winner, total_deployed, num_strategies, avg_apy, lottery_ready, time_until = vault_status
-        except:
+            status = vault_core.functions.getProtocolStatus().call()
+            liquid_usdc = float(status[0])
+            prize_pool = float(status[1])  
+            last_winner = status[2] if len(status) > 2 else "0x0000000000000000000000000000000000000000"
+            total_deployed = float(status[3]) if len(status) > 3 else 0
+            num_strategies = int(status[4]) if len(status) > 4 else 0
+            avg_apy = float(status[5]) if len(status) > 5 else 0
+            lottery_ready = bool(status[6]) if len(status) > 6 else False
+            time_until = int(status[7]) if len(status) > 7 else 0
+        except Exception as e:
+            print(f"Status call failed: {e}, using fallback")
             # Fallback to individual calls
-            liquid_usdc = usdc_contract.functions.balanceOf(VAULT_CORE_ADDRESS).call() / 1e6
-            prize_pool = 0
-            last_winner = "0x0000000000000000000000000000000000000000"
+            liquid_usdc = float(usdc_contract.functions.balanceOf(VAULT_CORE_ADDRESS).call()) / 1e6
             total_deployed = 0
-            num_strategies = 0
+            num_strategies = 3  # We know we have 3 strategies
             avg_apy = 0
+            prize_pool = 0
             lottery_ready = False
             time_until = 0
+
+        # Get strategy information
+        strategies_info = {}
+        strategy_total_balance = 0
+        
+        for name, address in STRATEGY_NAMES.items():
+            try:
+                strategy_contract = w3.eth.contract(address=address, abi=load_abi("strategy"))
+                
+                # Get strategy info
+                try:
+                    info = strategy_contract.functions.getStrategyInfo().call()
+                    strategy_name = info[0] if len(info) > 0 else name
+                    strategy_asset = info[1] if len(info) > 1 else USDC_ADDRESS
+                    strategy_protocol = info[2] if len(info) > 2 else address
+                    total_dep = float(info[3]) / 1e6 if len(info) > 3 else 0
+                    total_harv = float(info[4]) / 1e6 if len(info) > 4 else 0
+                    last_harvest = int(info[5]) if len(info) > 5 else 0
+                    is_paused = bool(info[6]) if len(info) > 6 else False
+                except:
+                    # Fallback
+                    strategy_name = name
+                    total_dep = 0
+                    total_harv = 0
+                    last_harvest = 0
+                    is_paused = False
+                
+                # Get current balance
+                try:
+                    balance = float(strategy_contract.functions.getBalance().call()) / 1e6
+                except:
+                    balance = 0
+                
+                strategy_total_balance += balance
+                
+                strategies_info[name] = {
+                    "address": address,
+                    "name": strategy_name,
+                    "total_deployed": total_dep,
+                    "total_harvested": total_harv,
+                    "current_balance": balance,
+                    "last_harvest": last_harvest,
+                    "is_paused": is_paused,
+                    "status": "ACTIVE" if not is_paused else "PAUSED"
+                }
+                
+            except Exception as e:
+                strategies_info[name] = {
+                    "address": address,
+                    "error": str(e),
+                    "status": "ERROR"
+                }
 
         # Get lottery information
         try:
             lottery_info = lottery_extension.functions.getLotteryInfo().call()
-            lottery_prize_pool, lottery_winner, lottery_ready, lottery_time_left = lottery_info
-            lottery_prize_pool = lottery_prize_pool / 1e6
-        except:
-            lottery_prize_pool = 0
-            lottery_winner = last_winner
+            lottery_prize = float(lottery_info[0]) / 1e6
+            lottery_winner = lottery_info[1]
+            lottery_ready = lottery_info[2]
+            lottery_time_left = int(lottery_info[3])
+        except Exception as e:
+            lottery_prize = 0
+            lottery_winner = "Unknown"
             lottery_ready = False
             lottery_time_left = 0
 
-        # Get yield opportunities
-        try:
-            opportunities = yield_aggregator.functions.calculateOptimalAllocation(
-                USDC_ADDRESS, 
-                int(1000000 * 1e6), 
-                config.max_risk_tolerance
-            ).call()
-            best_apy = opportunities[1] / 100 if opportunities and len(opportunities) > 1 else 0
-        except:
-            best_apy = 0
-
-        # Risk assessment
-        risk_level = "UNKNOWN"
-        if risk_api:
-            try:
-                strategies = vault_core.functions.getStrategies().call()
-                if strategies:
-                    risk_scores = []
-                    for strategy in strategies[:3]:  # Check top 3 strategies
-                        try:
-                            risk_score = risk_api.assess_strategy_risk(strategy)
-                            risk_scores.append(risk_score)
-                        except:
-                            continue
-                    
-                    if risk_scores:
-                        avg_risk = sum(risk_scores) / len(risk_scores)
-                        risk_level = "LOW" if avg_risk < 0.3 else "MEDIUM" if avg_risk < 0.7 else "HIGH"
-            except Exception as e:
-                risk_level = f"ERROR: {str(e)[:50]}"
-
-        # Market conditions
-        try:
-            market_conditions = yield_aggregator.functions.getMarketConditions().call()
-            market_stress = market_conditions[5] if len(market_conditions) > 5 else False
-        except:
-            market_stress = False
-
-        status_report = {
-            "vault_metrics": {
-                "liquid_usdc": f"{liquid_usdc:.2f} USDC",
-                "total_deployed": f"{total_deployed:.2f} USDC",
-                "number_of_strategies": num_strategies,
-                "average_apy": f"{avg_apy/100:.2f}%",
-                "best_available_apy": f"{best_apy:.2f}%"
-            },
-            "lottery_status": {
-                "current_prize_pool": f"{lottery_prize_pool:.2f} USDC",
-                "last_winner": lottery_winner,
-                "lottery_ready": lottery_ready,
-                "time_until_next": f"{lottery_time_left/3600:.1f} hours"
-            },
-            "risk_analysis": {
-                "overall_risk_level": risk_level,
-                "market_stress": market_stress,
-                "risk_model_available": RISK_MODEL_AVAILABLE
-            },
-            "optimization_opportunities": {
-                "rebalance_needed": best_apy > avg_apy/100 + config.rebalance_threshold/10000,
-                "cross_chain_enabled": config.cross_chain_enabled,
-                "auto_rebalance": config.auto_rebalance_enabled
-            },
-            "contract_addresses": {
-                "vault_core": VAULT_CORE_ADDRESS,
-                "lottery_extension": LOTTERY_EXTENSION,
-                "usdc_token": USDC_ADDRESS,
-                "agent_address": agent_account.address
-            }
-        }
-
-        return f"Enhanced Vault Status: {json.dumps(status_report, indent=2)}"
-    except Exception as e:
-        return f"Error getting comprehensive vault status: {e}"
-
-@tool
-def perform_ml_risk_assessment(strategy_addresses: str) -> str:
-    """
-    Perform ML-powered risk assessment on strategy addresses.
-    Args:
-        strategy_addresses: Comma-separated list of strategy addresses
-    """
-    print(f"Tool: perform_ml_risk_assessment for {strategy_addresses}")
-    
-    if not risk_api:
-        return "❌ ML Risk assessment unavailable - model not loaded"
-    
-    addresses = [addr.strip() for addr in strategy_addresses.split(',')]
-    assessments = []
-    
-    for address in addresses:
-        try:
-            risk_score = risk_api.assess_strategy_risk(address)
-            detailed = risk_api.get_detailed_assessment(address)
-            
-            assessment = {
-                "address": address,
-                "risk_score": f"{risk_score:.3f}",
-                "risk_level": "LOW" if risk_score < 0.3 else "MEDIUM" if risk_score < 0.7 else "HIGH",
-                "recommendation": "APPROVE" if risk_score < 0.5 else "CAUTION" if risk_score < 0.8 else "REJECT",
-                "confidence": detailed.get('confidence_level', 0) if isinstance(detailed, dict) else 0,
-                "details": str(detailed)[:200] + "..." if len(str(detailed)) > 200 else str(detailed)
-            }
-            assessments.append(assessment)
-            
-        except Exception as e:
-            assessments.append({
-                "address": address,
-                "error": str(e),
-                "risk_score": "N/A",
-                "recommendation": "MANUAL_REVIEW"
-            })
-    
-    return f"ML Risk Assessment Results:\n{json.dumps(assessments, indent=2)}"
-
-@tool
-def optimize_yield_allocation(amount_usdc: float, max_risk: float = None) -> str:
-    """
-    Use ML-powered yield aggregator to find optimal allocation across strategies.
-    Args:
-        amount_usdc: Amount in USDC to allocate
-        max_risk: Maximum risk tolerance (0.0-1.0), defaults to config value
-    """
-    print(f"Tool: optimize_yield_allocation - {amount_usdc} USDC, max_risk: {max_risk}")
-    
-    if max_risk is None:
-        max_risk = config.max_risk_tolerance
-    else:
-        max_risk = int(max_risk * 10000)  # Convert to basis points
-    
-    try:
-        amount_wei = int(amount_usdc * 1e6)  # USDC has 6 decimals
-        
-        # Get optimal allocation from yield aggregator
-        result = yield_aggregator.functions.calculateOptimalAllocation(
-            USDC_ADDRESS,
-            amount_wei,
-            max_risk
-        ).call()
-        
-        allocations, total_expected_apy, total_risk, gas_estimate = result
-        
-        if not allocations:
-            return "❌ No suitable yield opportunities found within risk tolerance"
-        
-        allocation_details = []
-        for i, allocation in enumerate(allocations):
-            protocol, chain_id, amount, expected_apy, risk_score, allocation_pct, gas_est, requires_bridge, execution_data = allocation
-            
-            allocation_details.append({
-                "protocol": protocol,
-                "chain_id": chain_id,
-                "amount_usdc": amount / 1e6,
-                "expected_apy": f"{expected_apy/100:.2f}%",
-                "risk_score": risk_score,
-                "allocation_percentage": f"{allocation_pct/100:.1f}%",
-                "requires_bridge": requires_bridge,
-                "gas_estimate": gas_est
-            })
-        
-        optimization_result = {
-            "total_amount": amount_usdc,
-            "total_expected_apy": f"{total_expected_apy/100:.2f}%",
-            "total_risk": total_risk,
-            "total_gas_estimate": gas_estimate,
-            "allocations": allocation_details,
-            "recommendation": "EXECUTE" if total_risk <= max_risk else "REVIEW_RISK"
-        }
-        
-        return f"Yield Optimization Results:\n{json.dumps(optimization_result, indent=2)}"
-        
-    except Exception as e:
-        return f"❌ Yield optimization failed: {e}"
-
-@tool
-def execute_optimal_strategy_deployment(amount_usdc: float, max_risk: float = None) -> str:
-    """
-    Execute deployment to optimal strategies based on ML analysis.
-    Args:
-        amount_usdc: Amount in USDC to deploy
-        max_risk: Maximum risk tolerance (0.0-1.0)
-    """
-    print(f"Tool: execute_optimal_strategy_deployment - {amount_usdc} USDC")
-    
-    try:
-        # First get optimal allocation
-        optimization = optimize_yield_allocation(amount_usdc, max_risk)
-        
-        if "❌" in optimization:
-            return optimization
-        
-        # Extract allocation data (simplified for demo)
-        amount_wei = int(amount_usdc * 1e6)
-        
-        # For demo, we'll deploy to the vault's strategy system
-        # In production, this would execute the specific allocations
-        
-        # Check available balance
-        liquid_balance = usdc_contract.functions.balanceOf(VAULT_CORE_ADDRESS).call()
-        
-        if amount_wei > liquid_balance:
-            return f"❌ Insufficient liquid funds: {liquid_balance/1e6:.2f} USDC available, {amount_usdc:.2f} requested"
-        
-        # Execute deployment via vault's strategy system
-        try:
-            tx = vault_core.functions.harvestAllStrategies().build_transaction({
-                'from': agent_account.address,
-                'nonce': w3.eth.get_transaction_count(agent_account.address),
-                'gas': 2_000_000,
-                'gasPrice': w3.eth.gas_price,
-                'chainId': ETHERLINK_CHAIN_ID
-            })
-            
-            result = send_transaction(tx, f"Deploy {amount_usdc} USDC to optimal strategies")
-            
-            if result["success"]:
-                return f"✅ Successfully deployed {amount_usdc} USDC to optimal strategies\nOptimization details:\n{optimization}\nTX: {result['tx_hash']}"
-            else:
-                return f"❌ Deployment failed: {result['error']}"
-                
-        except Exception as e:
-            return f"❌ Strategy deployment error: {e}"
-            
-    except Exception as e:
-        return f"❌ Optimal strategy deployment failed: {e}"
-
-@tool
-def manage_cross_chain_opportunities() -> str:
-    """
-    Analyze and manage cross-chain yield opportunities using LayerZero bridge.
-    """
-    print("Tool: manage_cross_chain_opportunities")
-    
-    try:
-        opportunities = []
-        
-        # Check supported chains
-        for chain_name, chain_info in SUPPORTED_CHAINS.items():
-            if chain_name == "etherlink":
-                continue  # Skip current chain
-            
-            try:
-                # Check if chain is supported by bridge
-                chain_config = bridge_contract.functions.getChainConfig(chain_info["id"]).call()
-                if chain_config[2]:  # active
-                    opportunities.append({
-                        "chain": chain_name,
-                        "chain_id": chain_info["id"],
-                        "bridge_fee": w3.from_wei(chain_config[5], 'ether'),
-                        "min_amount": chain_config[3] / 1e6,
-                        "max_amount": chain_config[4] / 1e6,
-                        "status": "AVAILABLE"
-                    })
-            except:
-                opportunities.append({
-                    "chain": chain_name,
-                    "chain_id": chain_info["id"],
-                    "status": "UNAVAILABLE"
-                })
-        
-        # Get best opportunities from yield aggregator
-        try:
-            top_opportunities = yield_aggregator.functions.getTopYieldOpportunities(
-                USDC_ADDRESS,
-                config.max_risk_tolerance,
-                5
-            ).call()
-            
-            cross_chain_analysis = {
-                "available_chains": len([o for o in opportunities if o.get("status") == "AVAILABLE"]),
-                "bridge_opportunities": opportunities,
-                "top_yield_opportunities": len(top_opportunities) if top_opportunities else 0,
-                "cross_chain_enabled": config.cross_chain_enabled,
-                "recommendation": "EXPLORE" if len(opportunities) > 0 else "LOCAL_ONLY"
-            }
-        except:
-            cross_chain_analysis = {
-                "available_chains": len([o for o in opportunities if o.get("status") == "AVAILABLE"]),
-                "bridge_opportunities": opportunities,
-                "cross_chain_enabled": config.cross_chain_enabled,
-                "recommendation": "BRIDGE_CHECK_NEEDED"
-            }
-        
-        return f"Cross-Chain Analysis:\n{json.dumps(cross_chain_analysis, indent=2)}"
-        
-    except Exception as e:
-        return f"❌ Cross-chain analysis failed: {e}"
-
-@tool
-def execute_lottery_management() -> str:
-    """
-    Manage lottery system including participant tracking and prize distribution.
-    """
-    print("Tool: execute_lottery_management")
-    
-    try:
-        # Get lottery status
-        lottery_info = lottery_extension.functions.getLotteryInfo().call()
-        prize_pool, last_winner, ready, time_left = lottery_info
-        
-        prize_pool_usdc = prize_pool / 1e6
-        
-        # Get depositors
+        # Get depositors for lottery
         try:
             depositors = lottery_extension.functions.getDepositors().call()
             num_participants = len(depositors)
         except:
             num_participants = 0
+
+        # Risk assessment if available
+        risk_assessment = {}
+        if risk_api:
+            for name, address in STRATEGY_NAMES.items():
+                try:
+                    risk_score = risk_api.assess_strategy_risk(address)
+                    risk_level = "LOW" if risk_score < 0.3 else "MEDIUM" if risk_score < 0.7 else "HIGH"
+                    risk_assessment[name] = {
+                        "risk_score": f"{risk_score:.3f}",
+                        "risk_level": risk_level,
+                        "recommendation": "APPROVE" if risk_score < 0.5 else "MONITOR" if risk_score < 0.8 else "REVIEW"
+                    }
+                except:
+                    risk_assessment[name] = {"risk_score": "N/A", "risk_level": "UNKNOWN"}
+
+        # Get current market data if available
+        market_data = {}
+        if price_manager:
+            try:
+                usdc_price = price_manager.get_price("USDC")
+                eth_price = price_manager.get_price("ETH")
+                market_data = {
+                    "usdc_price": f"${usdc_price:.4f}",
+                    "eth_price": f"${eth_price:.2f}",
+                    "last_updated": datetime.now().isoformat()
+                }
+            except:
+                market_data = {"error": "Price data unavailable"}
+
+        comprehensive_status = {
+            "vault_metrics": {
+                "liquid_usdc": f"{liquid_usdc:.2f}",
+                "total_deployed": f"{strategy_total_balance:.2f}",
+                "total_assets": f"{liquid_usdc + strategy_total_balance:.2f}",
+                "number_of_strategies": len(STRATEGY_NAMES),
+                "average_apy": f"{avg_apy/100:.2f}%" if avg_apy > 0 else "Calculating..."
+            },
+            "strategies": strategies_info,
+            "lottery_system": {
+                "current_prize_pool": f"{lottery_prize:.2f} USDC",
+                "participants": num_participants,
+                "last_winner": lottery_winner,
+                "lottery_ready": lottery_ready,
+                "time_until_next": f"{lottery_time_left/3600:.1f} hours",
+                "min_prize_pool": f"{lottery_config.min_prize_pool} USDC"
+            },
+            "risk_analysis": risk_assessment,
+            "market_data": market_data,
+            "contract_addresses": {
+                "vault_core": VAULT_CORE_ADDRESS,
+                "lottery_extension": LOTTERY_EXTENSION,
+                "usdc_token": USDC_ADDRESS,
+                "strategies": STRATEGY_NAMES
+            },
+            "weekly_lottery_config": {
+                "cycle_days": lottery_config.weekly_cycle_days,
+                "execution_day": "Monday",
+                "execution_hour": f"{lottery_config.lottery_execution_hour}:00 UTC",
+                "min_deposit": f"{lottery_config.min_deposit_for_lottery} USDC"
+            }
+        }
+
+        return f"Comprehensive Vault Status:\n{json.dumps(comprehensive_status, indent=2)}"
         
-        lottery_status = {
-            "current_prize_pool": f"{prize_pool_usdc:.2f} USDC",
-            "participants": num_participants,
-            "lottery_ready": ready,
-            "time_until_next": f"{time_left/3600:.1f} hours",
-            "last_winner": last_winner
+    except Exception as e:
+        return f"❌ Error getting vault status: {e}"
+
+@tool
+def get_market_analysis_and_pricing() -> str:
+    """
+    Get comprehensive market analysis including cryptocurrency prices and trends.
+    """
+    print("Tool: get_market_analysis_and_pricing")
+    
+    if not price_manager:
+        return "❌ Price feed manager not available"
+    
+    try:
+        market_analysis = {
+            "timestamp": datetime.now().isoformat(),
+            "prices": {},
+            "market_sentiment": {},
+            "risk_indicators": {}
         }
         
-        # Check if lottery should be executed
-        if ready and prize_pool_usdc >= 10:  # Minimum 10 USDC
+        # Get current prices for major cryptocurrencies
+        important_assets = ["BTC", "ETH", "USDC", "USDT", "ARB"]
+        
+        for asset in important_assets:
             try:
-                tx = lottery_extension.functions.executeLottery().build_transaction({
+                price_data = price_manager.get_detailed_price_data(asset)
+                market_analysis["prices"][asset] = price_data
+            except Exception as e:
+                market_analysis["prices"][asset] = {"error": str(e)}
+        
+        # Calculate market volatility indicators
+        try:
+            eth_price = price_manager.get_price("ETH")
+            btc_price = price_manager.get_price("BTC")
+            
+            # Simple volatility assessment (in production, would use historical data)
+            volatility_score = 0.5  # Default medium volatility
+            if eth_price > 3000:  # High price might indicate bull market
+                volatility_score = 0.3  # Lower volatility in bull markets
+            elif eth_price < 1500:  # Low price might indicate bear market
+                volatility_score = 0.8  # Higher volatility in bear markets
+            
+            market_analysis["market_sentiment"] = {
+                "volatility_score": volatility_score,
+                "market_phase": "BULL" if eth_price > 2500 else "BEAR" if eth_price < 1800 else "SIDEWAYS",
+                "risk_level": "LOW" if volatility_score < 0.4 else "MEDIUM" if volatility_score < 0.7 else "HIGH"
+            }
+            
+        except Exception as e:
+            market_analysis["market_sentiment"] = {"error": str(e)}
+        
+        # Risk indicators for DeFi strategies
+        try:
+            usdc_price = price_manager.get_price("USDC")
+            usdc_depeg_risk = abs(1.0 - usdc_price) > 0.01  # More than 1% deviation
+            
+            market_analysis["risk_indicators"] = {
+                "usdc_depeg_risk": usdc_depeg_risk,
+                "usdc_price": usdc_price,
+                "stablecoin_risk_level": "HIGH" if usdc_depeg_risk else "LOW",
+                "defi_market_conditions": "STABLE" if not usdc_depeg_risk else "STRESSED"
+            }
+            
+        except Exception as e:
+            market_analysis["risk_indicators"] = {"error": str(e)}
+        
+        return f"Market Analysis and Pricing:\n{json.dumps(market_analysis, indent=2)}"
+        
+    except Exception as e:
+        return f"❌ Market analysis failed: {e}"
+
+@tool
+def perform_ml_risk_assessment_deployed_strategies() -> str:
+    """
+    Perform ML risk assessment on all deployed strategies with market data integration.
+    """
+    print("Tool: perform_ml_risk_assessment_deployed_strategies")
+    
+    if not risk_api:
+        return "❌ ML Risk assessment unavailable - model not loaded"
+    
+    assessments = {}
+    overall_risk = 0
+    strategy_count = 0
+    
+    # Get current market conditions for enhanced risk assessment
+    market_volatility = 0.5  # Default
+    if price_manager:
+        try:
+            eth_price = price_manager.get_price("ETH")
+            market_volatility = 0.3 if eth_price > 2500 else 0.8 if eth_price < 1800 else 0.5
+        except:
+            pass
+    
+    for strategy_name, strategy_address in STRATEGY_NAMES.items():
+        try:
+            base_risk_score = risk_api.assess_strategy_risk(strategy_address)
+            detailed = risk_api.get_detailed_assessment(strategy_address)
+            
+            # Adjust risk score based on market conditions
+            market_adjustment = 0.0
+            if "pancake" in strategy_name.lower():
+                # DEX strategies more sensitive to market volatility
+                market_adjustment = market_volatility * 0.2
+            elif "superlend" in strategy_name.lower():
+                # Lending strategies less sensitive but still affected
+                market_adjustment = market_volatility * 0.1
+            
+            adjusted_risk_score = min(1.0, base_risk_score + market_adjustment)
+            
+            risk_level = "LOW" if adjusted_risk_score < 0.3 else "MEDIUM" if adjusted_risk_score < 0.7 else "HIGH"
+            recommendation = "APPROVE" if adjusted_risk_score < 0.5 else "MONITOR" if adjusted_risk_score < 0.8 else "EMERGENCY_REVIEW"
+            
+            # Get strategy balance for risk weighting
+            try:
+                strategy_contract = w3.eth.contract(address=strategy_address, abi=load_abi("strategy"))
+                balance = float(strategy_contract.functions.getBalance().call()) / 1e6
+            except:
+                balance = 0
+            
+            assessments[strategy_name] = {
+                "address": strategy_address,
+                "base_risk_score": f"{base_risk_score:.3f}",
+                "market_adjusted_risk": f"{adjusted_risk_score:.3f}",
+                "market_adjustment": f"{market_adjustment:.3f}",
+                "risk_level": risk_level,
+                "recommendation": recommendation,
+                "current_balance": f"{balance:.2f} USDC",
+                "weighted_risk": adjusted_risk_score * balance,
+                "market_volatility": f"{market_volatility:.3f}",
+                "details": str(detailed)[:150] + "..." if len(str(detailed)) > 150 else str(detailed)
+            }
+            
+            overall_risk += adjusted_risk_score * balance
+            strategy_count += balance
+            
+        except Exception as e:
+            assessments[strategy_name] = {
+                "address": strategy_address,
+                "error": str(e),
+                "recommendation": "MANUAL_REVIEW"
+            }
+    
+    # Calculate portfolio-weighted risk
+    portfolio_risk = overall_risk / strategy_count if strategy_count > 0 else 0
+    portfolio_level = "LOW" if portfolio_risk < 0.3 else "MEDIUM" if portfolio_risk < 0.7 else "HIGH"
+    
+    risk_report = {
+        "individual_strategies": assessments,
+        "portfolio_analysis": {
+            "weighted_risk_score": f"{portfolio_risk:.3f}",
+            "portfolio_risk_level": portfolio_level,
+            "total_assessed_value": f"{strategy_count:.2f} USDC",
+            "recommendation": "CONTINUE" if portfolio_risk < 0.6 else "REBALANCE" if portfolio_risk < 0.8 else "EMERGENCY_ACTION"
+        },
+        "market_conditions": {
+            "volatility_score": f"{market_volatility:.3f}",
+            "market_impact": "Volatility adjustments applied to risk scores",
+            "high_risk_strategies": [name for name, data in assessments.items() 
+                                   if isinstance(data, dict) and data.get("risk_level") == "HIGH"]
+        },
+        "risk_thresholds": {
+            "emergency_threshold": f"{risk_config.emergency_risk_threshold:.1f}",
+            "rebalance_threshold": f"{risk_config.rebalance_risk_threshold:.1f}",
+            "max_strategy_allocation": f"{risk_config.max_strategy_allocation:.1%}"
+        }
+    }
+    
+    return f"ML Risk Assessment - Deployed Strategies:\n{json.dumps(risk_report, indent=2)}"
+
+@tool
+def harvest_all_deployed_strategies() -> str:
+    """
+    Harvest yield from all deployed strategies and prepare for lottery.
+    """
+    print("Tool: harvest_all_deployed_strategies")
+    
+    try:
+        harvest_results = {}
+        total_harvested = 0
+        
+        # Harvest each strategy individually
+        for strategy_name, strategy_address in STRATEGY_NAMES.items():
+            try:
+                strategy_contract = w3.eth.contract(address=strategy_address, abi=load_abi("strategy"))
+                
+                # Check if strategy is paused
+                try:
+                    is_paused = strategy_contract.functions.paused().call()
+                    if is_paused:
+                        harvest_results[strategy_name] = {"status": "SKIPPED", "reason": "Strategy paused"}
+                        continue
+                except:
+                    pass  # Continue if paused() function not available
+                
+                # Get balance before harvest
+                try:
+                    balance_before = strategy_contract.functions.getBalance().call()
+                except:
+                    balance_before = 0
+                
+                # Execute harvest
+                tx = strategy_contract.functions.harvest(b"").build_transaction({
                     'from': agent_account.address,
                     'nonce': w3.eth.get_transaction_count(agent_account.address),
                     'gas': 1_000_000,
@@ -554,38 +646,482 @@ def execute_lottery_management() -> str:
                     'chainId': ETHERLINK_CHAIN_ID
                 })
                 
-                result = send_transaction(tx, f"Execute lottery draw - {prize_pool_usdc:.2f} USDC prize")
+                result = send_transaction(tx, f"Harvest {strategy_name}")
                 
                 if result["success"]:
-                    # Get updated winner info
+                    # Get balance after harvest
                     time.sleep(2)
-                    new_info = lottery_extension.functions.getLotteryInfo().call()
-                    new_winner = new_info[1]
+                    try:
+                        balance_after = strategy_contract.functions.getBalance().call()
+                        harvested_amount = (balance_after - balance_before) / 1e6
+                    except:
+                        harvested_amount = 0
                     
-                    lottery_status["action"] = "LOTTERY_EXECUTED"
-                    lottery_status["winner"] = new_winner
-                    lottery_status["prize_awarded"] = f"{prize_pool_usdc:.2f} USDC"
-                    lottery_status["tx_hash"] = result['tx_hash']
+                    harvest_results[strategy_name] = {
+                        "status": "SUCCESS",
+                        "harvested": f"{harvested_amount:.2f} USDC",
+                        "tx_hash": result["tx_hash"],
+                        "gas_used": result.get("gas_used", 0)
+                    }
+                    total_harvested += harvested_amount
                 else:
-                    lottery_status["action"] = "LOTTERY_FAILED"
-                    lottery_status["error"] = result['error']
+                    harvest_results[strategy_name] = {
+                        "status": "FAILED",
+                        "error": result["error"]
+                    }
                     
             except Exception as e:
-                lottery_status["action"] = "LOTTERY_ERROR"
-                lottery_status["error"] = str(e)
-        else:
-            lottery_status["action"] = "WAITING"
-            lottery_status["reason"] = "Not ready" if not ready else f"Prize pool too small ({prize_pool_usdc:.2f} < 10 USDC)"
+                harvest_results[strategy_name] = {
+                    "status": "ERROR",
+                    "error": str(e)
+                }
         
-        return f"Lottery Management:\n{json.dumps(lottery_status, indent=2)}"
+        # Also try vault-level harvest
+        try:
+            vault_harvest_tx = vault_core.functions.harvestAllStrategies().build_transaction({
+                'from': agent_account.address,
+                'nonce': w3.eth.get_transaction_count(agent_account.address),
+                'gas': 2_000_000,
+                'gasPrice': w3.eth.gas_price,
+                'chainId': ETHERLINK_CHAIN_ID
+            })
+            
+            vault_result = send_transaction(vault_harvest_tx, "Vault-level harvest all strategies")
+            
+            if vault_result["success"]:
+                harvest_results["vault_harvest"] = {
+                    "status": "SUCCESS",
+                    "tx_hash": vault_result["tx_hash"]
+                }
+            else:
+                harvest_results["vault_harvest"] = {
+                    "status": "FAILED",
+                    "error": vault_result["error"]
+                }
+                
+        except Exception as e:
+            harvest_results["vault_harvest"] = {
+                "status": "ERROR",
+                "error": str(e)
+            }
+        
+        harvest_summary = {
+            "total_harvested": f"{total_harvested:.2f} USDC",
+            "successful_harvests": len([r for r in harvest_results.values() if r.get("status") == "SUCCESS"]),
+            "failed_harvests": len([r for r in harvest_results.values() if r.get("status") in ["FAILED", "ERROR"]]),
+            "harvest_details": harvest_results,
+            "next_action": "DEPOSIT_TO_LOTTERY" if total_harvested > yield_config.min_harvest_amount else "WAIT_FOR_MORE_YIELD"
+        }
+        
+        return f"Strategy Harvest Results:\n{json.dumps(harvest_summary, indent=2)}"
         
     except Exception as e:
-        return f"❌ Lottery management failed: {e}"
+        return f"❌ Harvest failed: {e}"
+
+@tool
+def execute_weekly_lottery_cycle() -> str:
+    """
+    Execute the complete weekly lottery cycle: harvest, deposit yield, and run lottery.
+    """
+    print("Tool: execute_weekly_lottery_cycle")
+    
+    try:
+        cycle_results = {
+            "cycle_start": datetime.now().isoformat(),
+            "steps": {},
+            "final_status": "UNKNOWN"
+        }
+        
+        # Step 1: Harvest all strategies
+        print("Step 1: Harvesting all strategies...")
+        harvest_result = harvest_all_deployed_strategies.invoke({})
+        cycle_results["steps"]["harvest"] = harvest_result
+        
+        # Step 2: Check lottery status before execution
+        try:
+            lottery_info = lottery_extension.functions.getLotteryInfo().call()
+            current_prize = float(lottery_info[0]) / 1e6
+            can_execute = lottery_info[2] if len(lottery_info) > 2 else False
+            
+            cycle_results["steps"]["pre_lottery_check"] = {
+                "current_prize_pool": f"{current_prize:.2f} USDC",
+                "can_execute": can_execute,
+                "min_required": f"{lottery_config.min_prize_pool} USDC"
+            }
+        except Exception as e:
+            cycle_results["steps"]["pre_lottery_check"] = {"error": str(e)}
+            current_prize = 0
+            can_execute = False
+        
+        # Step 3: If we have harvested yield, deposit it to lottery
+        if "total_harvested" in harvest_result and float(harvest_result.split("total_harvested")[1].split("USDC")[0].strip('": ')) > 0:
+            print("Step 2: Depositing harvested yield to lottery...")
+            
+            # Simulate additional yield for lottery (since our strategies are simplified)
+            additional_yield = 25.0  # 25 USDC for demo
+            yield_deposit_result = simulate_yield_harvest_and_deposit.invoke({"amount_usdc": additional_yield})
+            cycle_results["steps"]["yield_deposit"] = yield_deposit_result
+            
+            # Update prize pool
+            current_prize += additional_yield
+        
+        # Step 4: Execute lottery if conditions are met
+        if current_prize >= lottery_config.min_prize_pool:
+            print("Step 3: Executing lottery...")
+            
+            try:
+                # Get participants before lottery
+                try:
+                    depositors = lottery_extension.functions.getDepositors().call()
+                    participants_before = len(depositors)
+                except:
+                    participants_before = 0
+                
+                lottery_tx = lottery_extension.functions.executeLottery().build_transaction({
+                    'from': agent_account.address,
+                    'nonce': w3.eth.get_transaction_count(agent_account.address),
+                    'gas': 1_500_000,
+                    'gasPrice': w3.eth.gas_price,
+                    'chainId': ETHERLINK_CHAIN_ID
+                })
+                
+                lottery_result = send_transaction(lottery_tx, f"Execute weekly lottery - {current_prize:.2f} USDC prize")
+                
+                if lottery_result["success"]:
+                    # Get winner information
+                    time.sleep(3)
+                    try:
+                        new_lottery_info = lottery_extension.functions.getLotteryInfo().call()
+                        winner = new_lottery_info[1]
+                        new_prize_pool = float(new_lottery_info[0]) / 1e6
+                    except:
+                        winner = "Unknown"
+                        new_prize_pool = 0
+                    
+                    cycle_results["steps"]["lottery_execution"] = {
+                        "status": "SUCCESS",
+                        "winner": winner,
+                        "prize_awarded": f"{current_prize:.2f} USDC",
+                        "participants": participants_before,
+                        "tx_hash": lottery_result["tx_hash"],
+                        "new_prize_pool": f"{new_prize_pool:.2f} USDC"
+                    }
+                    cycle_results["final_status"] = "LOTTERY_COMPLETED"
+                else:
+                    cycle_results["steps"]["lottery_execution"] = {
+                        "status": "FAILED",
+                        "error": lottery_result["error"]
+                    }
+                    cycle_results["final_status"] = "LOTTERY_FAILED"
+                    
+            except Exception as e:
+                cycle_results["steps"]["lottery_execution"] = {
+                    "status": "ERROR",
+                    "error": str(e)
+                }
+                cycle_results["final_status"] = "LOTTERY_ERROR"
+        else:
+            cycle_results["steps"]["lottery_execution"] = {
+                "status": "SKIPPED",
+                "reason": f"Prize pool ({current_prize:.2f} USDC) below minimum ({lottery_config.min_prize_pool} USDC)"
+            }
+            cycle_results["final_status"] = "WAITING_FOR_MORE_YIELD"
+        
+        # Step 5: Post-cycle analysis
+        cycle_results["cycle_end"] = datetime.now().isoformat()
+        cycle_results["next_cycle"] = (datetime.now() + timedelta(days=lottery_config.weekly_cycle_days)).isoformat()
+        
+        return f"Weekly Lottery Cycle Results:\n{json.dumps(cycle_results, indent=2)}"
+        
+    except Exception as e:
+        return f"❌ Weekly lottery cycle failed: {e}"
+
+@tool
+def rebalance_strategy_allocations() -> str:
+    """
+    Rebalance allocations between strategies based on risk and performance with market data.
+    """
+    print("Tool: rebalance_strategy_allocations")
+    
+    try:
+        # Get current allocations
+        current_allocations = {}
+        total_deployed = 0
+        
+        for strategy_name, strategy_address in STRATEGY_NAMES.items():
+            try:
+                strategy_contract = w3.eth.contract(address=strategy_address, abi=load_abi("strategy"))
+                balance = float(strategy_contract.functions.getBalance().call()) / 1e6
+                current_allocations[strategy_name] = balance
+                total_deployed += balance
+            except:
+                current_allocations[strategy_name] = 0
+        
+        # Calculate current percentages
+        current_percentages = {}
+        for name, balance in current_allocations.items():
+            current_percentages[name] = (balance / total_deployed * 100) if total_deployed > 0 else 0
+        
+        # Get market conditions for enhanced rebalancing
+        market_volatility = 0.5  # Default
+        if price_manager:
+            try:
+                eth_price = price_manager.get_price("ETH")
+                market_volatility = 0.3 if eth_price > 2500 else 0.8 if eth_price < 1800 else 0.5
+            except:
+                pass
+        
+        # Get risk scores and performance if available
+        risk_scores = {}
+        if risk_api:
+            for strategy_name, strategy_address in STRATEGY_NAMES.items():
+                try:
+                    base_risk = risk_api.assess_strategy_risk(strategy_address)
+                    
+                    # Apply market adjustments
+                    market_adjustment = 0.0
+                    if "pancake" in strategy_name.lower():
+                        market_adjustment = market_volatility * 0.2
+                    elif "superlend" in strategy_name.lower():
+                        market_adjustment = market_volatility * 0.1
+                    
+                    risk_scores[strategy_name] = min(1.0, base_risk + market_adjustment)
+                except:
+                    risk_scores[strategy_name] = 0.5  # Default medium risk
+        else:
+            # Default risk scores based on strategy type with market adjustment
+            base_risks = {
+                "simple_superlend_usdc": 0.3,      # Lower risk lending
+                "simple_pancake_usdc_weth": 0.5,   # Medium risk DEX
+                "lottery_yield": 0.2                # Lowest risk lottery
+            }
+            
+            for name, base_risk in base_risks.items():
+                market_adjustment = 0.0
+                if "pancake" in name.lower():
+                    market_adjustment = market_volatility * 0.2
+                elif "superlend" in name.lower():
+                    market_adjustment = market_volatility * 0.1
+                
+                risk_scores[name] = min(1.0, base_risk + market_adjustment)
+        
+        # Calculate optimal allocations with market-adjusted risk
+        strategy_scores = {}
+        for name in STRATEGY_NAMES.keys():
+            risk_penalty = risk_scores.get(name, 0.5)
+            # Inverse risk score (lower risk = higher score)
+            risk_adjusted_score = 1 - risk_penalty
+            
+            # Apply market condition bonus/penalty
+            if market_volatility > 0.7:  # High volatility - prefer safer strategies
+                if "lottery" in name.lower():
+                    risk_adjusted_score *= 1.2  # Bonus for lottery strategy
+                elif "pancake" in name.lower():
+                    risk_adjusted_score *= 0.8  # Penalty for DEX strategy
+            
+            strategy_scores[name] = risk_adjusted_score
+        
+        # Normalize scores to percentages
+        total_score = sum(strategy_scores.values())
+        optimal_percentages = {}
+        for name, score in strategy_scores.items():
+            optimal_percentages[name] = (score / total_score * 100) if total_score > 0 else 33.33
+        
+        # Apply maximum allocation limits
+        max_allocation_pct = risk_config.max_strategy_allocation * 100
+        for name in optimal_percentages:
+            if optimal_percentages[name] > max_allocation_pct:
+                optimal_percentages[name] = max_allocation_pct
+        
+        # Renormalize after applying limits
+        total_optimal = sum(optimal_percentages.values())
+        if total_optimal > 0:
+            for name in optimal_percentages:
+                optimal_percentages[name] = (optimal_percentages[name] / total_optimal * 100)
+        
+        # Calculate rebalancing needs
+        rebalancing_actions = {}
+        significant_rebalance_needed = False
+        
+        for name in STRATEGY_NAMES.keys():
+            current_pct = current_percentages.get(name, 0)
+            optimal_pct = optimal_percentages.get(name, 0)
+            difference = optimal_pct - current_pct
+            
+            if abs(difference) > 5:  # 5% threshold for rebalancing
+                significant_rebalance_needed = True
+                action = "INCREASE" if difference > 0 else "DECREASE"
+                amount_change = abs(difference) * total_deployed / 100
+                
+                rebalancing_actions[name] = {
+                    "action": action,
+                    "current_percentage": f"{current_pct:.1f}%",
+                    "optimal_percentage": f"{optimal_pct:.1f}%",
+                    "difference": f"{difference:+.1f}%",
+                    "amount_change": f"{amount_change:.2f} USDC",
+                    "risk_score": f"{risk_scores.get(name, 0.5):.3f}"
+                }
+        
+        rebalance_report = {
+            "current_allocations": {name: f"{bal:.2f} USDC ({pct:.1f}%)" 
+                                  for name, bal, pct in zip(current_allocations.keys(), 
+                                                          current_allocations.values(), 
+                                                          current_percentages.values())},
+            "optimal_allocations": {name: f"{pct:.1f}%" for name, pct in optimal_percentages.items()},
+            "risk_scores": {name: f"{score:.3f}" for name, score in risk_scores.items()},
+            "market_conditions": {
+                "volatility_score": f"{market_volatility:.3f}",
+                "market_adjustment": "Applied to risk calculations",
+                "rebalancing_bias": "Conservative (favoring safer strategies)" if market_volatility > 0.7 else "Balanced"
+            },
+            "rebalancing_needed": significant_rebalance_needed,
+            "rebalancing_actions": rebalancing_actions,
+            "total_deployed": f"{total_deployed:.2f} USDC",
+            "recommendation": "EXECUTE_REBALANCE" if significant_rebalance_needed else "MAINTAIN_CURRENT"
+        }
+        
+        return f"Strategy Rebalancing Analysis:\n{json.dumps(rebalance_report, indent=2)}"
+        
+    except Exception as e:
+        return f"❌ Rebalancing analysis failed: {e}"
+
+@tool
+def deploy_to_optimal_strategy(amount_usdc: float, strategy_preference: str = "auto") -> str:
+    """
+    Deploy funds to the optimal strategy based on current risk and performance analysis.
+    Args:
+        amount_usdc: Amount in USDC to deploy
+        strategy_preference: "auto", "simple_superlend_usdc", "simple_pancake_usdc_weth", or "lottery_yield"
+    """
+    print(f"Tool: deploy_to_optimal_strategy - {amount_usdc} USDC to {strategy_preference}")
+    
+    try:
+        # Check available liquid balance
+        liquid_balance = float(usdc_contract.functions.balanceOf(VAULT_CORE_ADDRESS).call()) / 1e6
+        
+        if amount_usdc > liquid_balance:
+            return f"❌ Insufficient liquid funds: {liquid_balance:.2f} USDC available, {amount_usdc:.2f} requested"
+        
+        # Determine target strategy
+        if strategy_preference == "auto":
+            # Use risk assessment and market conditions to choose optimal strategy
+            market_volatility = 0.5  # Default
+            if price_manager:
+                try:
+                    eth_price = price_manager.get_price("ETH")
+                    market_volatility = 0.3 if eth_price > 2500 else 0.8 if eth_price < 1800 else 0.5
+                except:
+                    pass
+            
+            best_strategy = None
+            best_score = -1
+            
+            if risk_api:
+                for strategy_name, strategy_address in STRATEGY_NAMES.items():
+                    try:
+                        base_risk = risk_api.assess_strategy_risk(strategy_address)
+                        
+                        # Apply market adjustments
+                        market_adjustment = 0.0
+                        if "pancake" in strategy_name.lower():
+                            market_adjustment = market_volatility * 0.2
+                        elif "superlend" in strategy_name.lower():
+                            market_adjustment = market_volatility * 0.1
+                        
+                        risk_score = min(1.0, base_risk + market_adjustment)
+                        
+                        # Score = yield potential / risk (simplified)
+                        yield_estimate = 0.05 if "superlend" in strategy_name else 0.08 if "pancake" in strategy_name else 0.03
+                        
+                        # Apply market condition adjustments to yield estimates
+                        if market_volatility > 0.7 and "pancake" in strategy_name:
+                            yield_estimate *= 0.8  # Reduce expected yield in high volatility
+                        
+                        risk_adjusted_score = yield_estimate / (risk_score + 0.1)  # Avoid division by zero
+                        
+                        if risk_adjusted_score > best_score and risk_score < 0.7:  # Only consider low-medium risk
+                            best_score = risk_adjusted_score
+                            best_strategy = strategy_name
+                    except:
+                        continue
+                
+                if not best_strategy:
+                    best_strategy = "simple_superlend_usdc"  # Default safe choice
+            else:
+                # Default strategy selection based on market conditions
+                if market_volatility > 0.7:
+                    best_strategy = "lottery_yield"  # Safest in high volatility
+                else:
+                    best_strategy = "simple_superlend_usdc"  # Default
+        else:
+            if strategy_preference in STRATEGY_NAMES:
+                best_strategy = strategy_preference
+            else:
+                return f"❌ Invalid strategy preference: {strategy_preference}. Valid options: {list(STRATEGY_NAMES.keys())}"
+        
+        # Execute deployment
+        amount_wei = int(amount_usdc * 1e6)
+        
+        try:
+            deploy_tx = vault_core.functions.deployToNamedStrategy(
+                best_strategy,
+                amount_wei,
+                b""  # Empty data
+            ).build_transaction({
+                'from': agent_account.address,
+                'nonce': w3.eth.get_transaction_count(agent_account.address),
+                'gas': 2_000_000,
+                'gasPrice': w3.eth.gas_price,
+                'chainId': ETHERLINK_CHAIN_ID
+            })
+            
+            result = send_transaction(deploy_tx, f"Deploy {amount_usdc} USDC to {best_strategy}")
+            
+            if result["success"]:
+                # Get updated balance
+                time.sleep(2)
+                try:
+                    strategy_address = STRATEGY_NAMES[best_strategy]
+                    strategy_contract = w3.eth.contract(address=strategy_address, abi=load_abi("strategy"))
+                    new_balance = float(strategy_contract.functions.getBalance().call()) / 1e6
+                except:
+                    new_balance = 0
+                
+                # Get current market context
+                market_context = "N/A"
+                if price_manager:
+                    try:
+                        eth_price = price_manager.get_price("ETH")
+                        market_context = f"ETH: ${eth_price:.2f}"
+                    except:
+                        pass
+                
+                deployment_result = {
+                    "status": "SUCCESS",
+                    "strategy": best_strategy,
+                    "strategy_address": STRATEGY_NAMES[best_strategy],
+                    "amount_deployed": f"{amount_usdc:.2f} USDC",
+                    "new_strategy_balance": f"{new_balance:.2f} USDC",
+                    "tx_hash": result["tx_hash"],
+                    "gas_used": result.get("gas_used", 0),
+                    "selection_reason": "ML Risk + Market Assessment" if risk_api and strategy_preference == "auto" else "Manual Selection",
+                    "market_context": market_context
+                }
+                
+                return f"Strategy Deployment Result:\n{json.dumps(deployment_result, indent=2)}"
+            else:
+                return f"❌ Deployment failed: {result['error']}"
+                
+        except Exception as e:
+            return f"❌ Deployment transaction failed: {e}"
+            
+    except Exception as e:
+        return f"❌ Optimal strategy deployment failed: {e}"
 
 @tool
 def simulate_yield_harvest_and_deposit(amount_usdc: float) -> str:
     """
-    Enhanced yield simulation with ML optimization and lottery integration.
+    Simulate yield generation and deposit to lottery for testing and weekly operations.
     """
     print(f"Tool: simulate_yield_harvest_and_deposit - {amount_usdc} USDC")
     
@@ -595,7 +1131,7 @@ def simulate_yield_harvest_and_deposit(amount_usdc: float) -> str:
     try:
         amount_wei = int(amount_usdc * 1e6)
         
-        # 1. Mint yield to agent
+        # Step 1: Mint yield to agent
         mint_tx = usdc_contract.functions.mint(agent_account.address, amount_wei).build_transaction({
             'from': agent_account.address,
             'nonce': w3.eth.get_transaction_count(agent_account.address),
@@ -610,7 +1146,7 @@ def simulate_yield_harvest_and_deposit(amount_usdc: float) -> str:
         
         time.sleep(2)
         
-        # 2. Approve lottery extension
+        # Step 2: Approve lottery extension
         approve_tx = usdc_contract.functions.approve(LOTTERY_EXTENSION, amount_wei).build_transaction({
             'from': agent_account.address,
             'nonce': w3.eth.get_transaction_count(agent_account.address),
@@ -619,207 +1155,197 @@ def simulate_yield_harvest_and_deposit(amount_usdc: float) -> str:
             'chainId': ETHERLINK_CHAIN_ID
         })
         
-        approve_result = send_transaction(approve_tx, f"Approve lottery extension")
+        approve_result = send_transaction(approve_tx, f"Approve lottery extension for {amount_usdc} USDC")
         if not approve_result["success"]:
             return f"❌ Failed to approve: {approve_result['error']}"
         
         time.sleep(2)
         
-        # 3. Deposit yield into lottery
-        deposit_tx = lottery_extension.functions.depositYieldForLottery(amount_wei).build_transaction({
-            'from': agent_account.address,
-            'nonce': w3.eth.get_transaction_count(agent_account.address),
-            'gas': 1_000_000,
-            'gasPrice': w3.eth.gas_price,
-            'chainId': ETHERLINK_CHAIN_ID
-        })
-        
-        deposit_result = send_transaction(deposit_tx, f"Deposit {amount_usdc} USDC yield to lottery")
-        
-        if deposit_result["success"]:
-            # Check if this triggers lottery execution
-            lottery_check = execute_lottery_management()
+        # Step 3: Deposit yield into lottery
+        try:
+            deposit_tx = lottery_extension.functions.depositYieldForLottery(amount_wei).build_transaction({
+                'from': agent_account.address,
+                'nonce': w3.eth.get_transaction_count(agent_account.address),
+                'gas': 1_000_000,
+                'gasPrice': w3.eth.gas_price,
+                'chainId': ETHERLINK_CHAIN_ID
+            })
             
-            return f"✅ Successfully simulated and deposited {amount_usdc} USDC yield\nMint TX: {mint_result['tx_hash']}\nDeposit TX: {deposit_result['tx_hash']}\nLottery Status: {lottery_check}"
-        else:
-            return f"❌ Failed to deposit yield: {deposit_result['error']}"
+            deposit_result = send_transaction(deposit_tx, f"Deposit {amount_usdc} USDC yield to lottery")
+            
+            if deposit_result["success"]:
+                # Check updated lottery status
+                time.sleep(2)
+                try:
+                    lottery_info = lottery_extension.functions.getLotteryInfo().call()
+                    new_prize_pool = float(lottery_info[0]) / 1e6
+                    can_execute = lottery_info[2] if len(lottery_info) > 2 else False
+                except:
+                    new_prize_pool = 0
+                    can_execute = False
+                
+                simulation_result = {
+                    "status": "SUCCESS",
+                    "yield_generated": f"{amount_usdc:.2f} USDC",
+                    "mint_tx": mint_result["tx_hash"],
+                    "approve_tx": approve_result["tx_hash"],
+                    "deposit_tx": deposit_result["tx_hash"],
+                    "new_prize_pool": f"{new_prize_pool:.2f} USDC",
+                    "lottery_ready": can_execute,
+                    "total_gas_used": mint_result.get("gas_used", 0) + approve_result.get("gas_used", 0) + deposit_result.get("gas_used", 0)
+                }
+                
+                return f"Yield Simulation Result:\n{json.dumps(simulation_result, indent=2)}"
+            else:
+                return f"❌ Failed to deposit yield: {deposit_result['error']}"
+                
+        except Exception as e:
+            return f"❌ Yield deposit failed: {e}"
             
     except Exception as e:
         return f"❌ Yield simulation failed: {e}"
 
-@tool
-def emergency_risk_monitoring() -> str:
-    """
-    Perform emergency risk monitoring across all strategies and positions.
-    """
-    print("Tool: emergency_risk_monitoring")
+# ==============================================================================
+# 4. WEEKLY LOTTERY AUTOMATION
+# ==============================================================================
+
+class WeeklyLotteryScheduler:
+    """Handles automated weekly lottery execution."""
     
-    try:
-        emergency_report = {
-            "timestamp": datetime.now().isoformat(),
-            "vault_status": "CHECKING",
-            "strategies_at_risk": [],
-            "market_conditions": "UNKNOWN",
-            "recommended_actions": [],
-            "risk_scores": {}
-        }
+    def __init__(self):
+        self.is_running = False
+        self.last_execution = None
+    
+    def should_execute_lottery(self):
+        """Check if it's time to execute the weekly lottery."""
+        now = datetime.now()
         
-        # Check vault emergency status
+        # Check if it's the right day and time
+        if now.weekday() == lottery_config.lottery_execution_day and now.hour == lottery_config.lottery_execution_hour:
+            # Check if we haven't executed today
+            if self.last_execution is None or self.last_execution.date() != now.date():
+                return True
+        return False
+    
+    def execute_automated_lottery(self):
+        """Execute the automated weekly lottery cycle."""
+        if self.is_running:
+            print("🔄 Lottery execution already in progress")
+            return
+        
+        self.is_running = True
         try:
-            # This would call the emergency system contract
-            # For now, we'll simulate the check
-            emergency_report["vault_status"] = "NORMAL"
-        except:
-            emergency_report["vault_status"] = "UNKNOWN"
-        
-        # Check strategies if risk model available
-        if risk_api:
-            try:
-                strategies = vault_core.functions.getStrategies().call()
-                high_risk_strategies = []
-                
-                for strategy in strategies:
-                    try:
-                        risk_score = risk_api.assess_strategy_risk(strategy)
-                        emergency_report["risk_scores"][strategy] = risk_score
-                        
-                        if risk_score > 0.8:  # High risk threshold
-                            high_risk_strategies.append({
-                                "address": strategy,
-                                "risk_score": risk_score,
-                                "recommendation": "EMERGENCY_EXIT"
-                            })
-                        elif risk_score > 0.6:  # Medium risk
-                            high_risk_strategies.append({
-                                "address": strategy,
-                                "risk_score": risk_score,
-                                "recommendation": "MONITOR"
-                            })
-                    except:
-                        continue
-                
-                emergency_report["strategies_at_risk"] = high_risk_strategies
-                
-                if high_risk_strategies:
-                    emergency_report["recommended_actions"].append("Review high-risk strategies")
-                    if any(s["risk_score"] > 0.8 for s in high_risk_strategies):
-                        emergency_report["recommended_actions"].append("URGENT: Emergency exit from high-risk strategies")
-                        
-            except Exception as e:
-                emergency_report["risk_assessment_error"] = str(e)
-        
-        # Check market conditions
-        try:
-            market_conditions = yield_aggregator.functions.getMarketConditions().call()
-            if len(market_conditions) > 5:
-                market_stress = market_conditions[5]
-                emergency_report["market_conditions"] = "STRESS" if market_stress else "NORMAL"
-                
-                if market_stress:
-                    emergency_report["recommended_actions"].append("Market stress detected - reduce risk exposure")
-        except:
-            pass
-        
-        # Overall assessment
-        if emergency_report["strategies_at_risk"]:
-            emergency_report["overall_status"] = "ATTENTION_REQUIRED"
-        elif emergency_report["market_conditions"] == "STRESS":
-            emergency_report["overall_status"] = "MONITOR"
-        else:
-            emergency_report["overall_status"] = "NORMAL"
-        
-        return f"Emergency Risk Monitoring:\n{json.dumps(emergency_report, indent=2)}"
-        
-    except Exception as e:
-        return f"❌ Emergency monitoring failed: {e}"
+            print("🎰 Starting automated weekly lottery execution...")
+            
+            # Execute the full lottery cycle
+            result = execute_weekly_lottery_cycle.invoke({})
+            print(f"✅ Weekly lottery cycle completed: {result}")
+            
+            self.last_execution = datetime.now()
+            
+        except Exception as e:
+            print(f"❌ Automated lottery execution failed: {e}")
+        finally:
+            self.is_running = False
+
+# Initialize scheduler
+lottery_scheduler = WeeklyLotteryScheduler()
 
 # ==============================================================================
-# 4. ENHANCED LANGCHAIN AGENT
+# 5. ENHANCED LANGCHAIN AGENT
 # ==============================================================================
 
 # Build enhanced tools list
 tools = [
     get_comprehensive_vault_status,
-    perform_ml_risk_assessment,
-    optimize_yield_allocation,
-    execute_optimal_strategy_deployment,
-    manage_cross_chain_opportunities,
-    execute_lottery_management,
-    simulate_yield_harvest_and_deposit,
-    emergency_risk_monitoring
+    get_market_analysis_and_pricing,
+    perform_ml_risk_assessment_deployed_strategies,
+    harvest_all_deployed_strategies,
+    execute_weekly_lottery_cycle,
+    rebalance_strategy_allocations,
+    deploy_to_optimal_strategy,
+    simulate_yield_harvest_and_deposit
 ]
 
 tool_names = [t.name for t in tools]
 
 enhanced_prompt_template = """
-You are the "Advanced Etherlink Vault Manager," a sophisticated AI agent with ML-powered risk assessment, cross-chain yield optimization, and automated lottery management capabilities.
+You are the "Enhanced Etherlink Vault Manager," a sophisticated AI agent managing a WEEKLY YIELD LOTTERY system with ML-powered risk assessment, real-time market data integration, and deployed strategies.
 
-Your address: {agent_address}
-Vault Core: {vault_core_address}
-Lottery Extension: {lottery_extension}
-Risk Oracle: {risk_oracle}
-Strategy Registry: {strategy_registry}
-Yield Aggregator: {yield_aggregator}
+Your deployed contracts:
+🏦 Vault Core: {vault_core_address}
+🎰 Lottery Extension: {lottery_extension}
+💰 USDC Token: {usdc_address}
+📊 Strategy Registry: {strategy_registry}
 
-ADVANCED CAPABILITIES:
-🧠 ML Risk Assessment: Real-time strategy risk scoring using machine learning
-⚡ Yield Optimization: Cross-chain yield aggregation with automated rebalancing
-🔄 Cross-Chain Management: LayerZero-powered bridge integration for maximum yield
-🎰 Advanced Lottery System: Sophisticated prize distribution with fair randomness
-📊 Market Intelligence: Real-time market condition analysis and adaptation
-🚨 Emergency Monitoring: Proactive risk detection and emergency response
-🤖 Autonomous Operations: Self-optimizing strategies with minimal human intervention
+DEPLOYED STRATEGIES:
+🏛️ SimpleSuperlendStrategy: {simple_superlend} (Lending protocol simulation)
+🥞 SimplePancakeSwapStrategy: {simple_pancake} (DEX liquidity simulation)  
+🎲 EtherlinkYieldLottery: {lottery_strategy} (Lottery-specific yield strategy)
+
+WEEKLY LOTTERY SYSTEM:
+- Operates on 7-day cycles starting Monday at 12:00 UTC
+- Collects yield from all strategies during the week
+- Participants are vault depositors weighted by deposit amount
+- Weekly prize distribution with ML risk-optimized yield generation
+- Minimum 10 USDC prize pool for execution
+- Winner selection uses provably fair randomness
 
 ENHANCED TOOLS:
 {tools}
 
 OPERATIONAL FRAMEWORK:
-1. **Comprehensive Analysis**: Always start with get_comprehensive_vault_status() for full system overview
-2. **Risk-First Approach**: Use perform_ml_risk_assessment() before any major strategy changes
-3. **Yield Optimization**: Apply optimize_yield_allocation() to maximize returns within risk tolerance
-4. **Cross-Chain Exploration**: Use manage_cross_chain_opportunities() for yield arbitrage
-5. **Automated Execution**: Deploy execute_optimal_strategy_deployment() for strategic fund allocation
-6. **Lottery Management**: Monitor and execute execute_lottery_management() for prize distribution
-7. **Emergency Vigilance**: Run emergency_risk_monitoring() if anomalies detected
-8. **Continuous Improvement**: Adapt strategies based on market conditions and performance
+1. **Monday Lottery Execution**: Check if it's lottery day and execute weekly cycle
+2. **Continuous Yield Harvesting**: Harvest from deployed strategies every 12 hours
+3. **Risk Monitoring**: ML assessment of all strategies every 6 hours with market data
+4. **Dynamic Rebalancing**: Optimize allocations based on risk/reward and market conditions
+5. **Prize Pool Management**: Ensure sufficient yield for meaningful prizes
+6. **Market Analysis**: Real-time cryptocurrency price monitoring and volatility assessment
+7. **Participant Tracking**: Monitor deposits and lottery eligibility
 
-DECISION MATRIX:
-Risk Score < 0.3: GREEN - Aggressive yield strategies, cross-chain arbitrage
-Risk Score 0.3-0.6: YELLOW - Balanced approach, moderate diversification  
-Risk Score 0.6-0.8: ORANGE - Conservative strategies, increased monitoring
-Risk Score > 0.8: RED - Emergency mode, capital preservation, exit strategies
+STRATEGY-SPECIFIC OPERATIONS:
+- SimpleSuperlendStrategy: Conservative lending with 1% simulated yield
+- SimplePancakeSwapStrategy: DEX liquidity with 0.3% fee simulation (market-sensitive)
+- EtherlinkYieldLottery: Direct lottery contribution with minimal risk
 
-CROSS-CHAIN STRATEGY:
-- Ethereum: Target high-TVL protocols (Aave, Compound) for stability
-- Arbitrum: Leverage low gas costs for frequent rebalancing
-- Polygon: Explore emerging DeFi opportunities with moderate risk
-- Etherlink: Base operations with VRF lottery as core offering
+MARKET-ENHANCED DECISION MATRIX:
+Risk Score < 0.3 + Market Volatility Adjustment: ✅ Aggressive allocation (up to 40%)
+Risk Score 0.3-0.6 + Market Adjustment: ⚠️ Moderate allocation (up to 30%)
+Risk Score 0.6-0.8 + Market Adjustment: 🔶 Conservative allocation (up to 20%)
+Risk Score > 0.8 + Market Adjustment: 🚨 Emergency review required
 
-LOTTERY MECHANICS:
-- Weekly draws with accumulated yield as prizes
-- Weighted probability based on deposit amounts
-- Minimum 10 USDC prize pool for execution
-- Automatic trigger when conditions are met
+MARKET CONDITIONS INTEGRATION:
+- High Volatility (ETH < $1800): Favor lottery_yield and superlend strategies
+- Medium Volatility ($1800 < ETH < $2500): Balanced allocation
+- Low Volatility (ETH > $2500): Allow higher pancake strategy allocation
+- USDC Depeg Risk: Emergency rebalancing to safest strategies
 
-Use the following format:
-Question: the user's request or operational directive
-Thought: Consider current market conditions, risk factors, and optimization opportunities
+WEEKLY LOTTERY MECHANICS:
+- Monday 12:00 UTC: Execute lottery if prize pool ≥ 10 USDC
+- Deposit-weighted probability (more deposits = higher chance)
+- Automated yield collection from all strategies
+- Prize distribution to single winner
+- Reset cycle for next week
+
+Use this format:
+Question: the user's operational request
+Thought: Consider current lottery cycle, strategy performance, market conditions, and risk factors
 Action: the action to take, should be one of [{tool_names}]
 Action Input: the input to the action
 Observation: the result of the action
-... (repeat as needed for comprehensive analysis)
-Thought: I now have sufficient information to provide strategic recommendations.
-Final Answer: comprehensive response with risk assessment, yield optimization, and actionable recommendations
+... (repeat for comprehensive analysis)
+Thought: I now have sufficient information for lottery operations with market context.
+Final Answer: comprehensive response with lottery status, strategy performance, market analysis, and actionable recommendations
 
-RISK MANAGEMENT PROTOCOL:
-- Never exceed 60% risk tolerance without explicit approval
-- Always diversify across minimum 3 strategies when possible
-- Maintain 20% liquid reserves for emergency exits
-- Monitor gas costs - never exceed 10% of potential yield
-- Cross-chain operations require additional 5% risk buffer
-- Emergency exit if any strategy exceeds 80% risk score
+PRIORITY OPERATIONS:
+1. Always check if it's lottery execution time
+2. Monitor strategy risk scores with market adjustments continuously
+3. Assess current market conditions and volatility
+4. Ensure sufficient yield generation for prizes
+5. Maintain participant engagement
+6. Optimize risk-adjusted returns based on market conditions
 
-Begin strategic operations!
+Begin enhanced lottery operations with market intelligence!
 
 Question: {input}
 Thought: {agent_scratchpad}
@@ -835,47 +1361,45 @@ agent_executor = AgentExecutor(
     tools=tools,
     verbose=True,
     handle_parsing_errors=True,
-    max_iterations=15,
+    max_iterations=12,
     early_stopping_method="force"
 )
 
 # ==============================================================================
-# 5. ENHANCED FASTAPI SERVER
+# 6. ENHANCED FASTAPI SERVER
 # ==============================================================================
 
 app = FastAPI(
-    title="Advanced Etherlink Vault Manager",
-    description="ML-powered AI agent for sophisticated DeFi yield optimization and lottery management",
-    version="3.0.0"
+    title="Enhanced Etherlink Vault Manager - Weekly Lottery System",
+    description="Production-ready AI agent for weekly yield lottery with deployed strategies and market intelligence",
+    version="4.1.0"
 )
 
 class AgentRequest(BaseModel):
     command: str
 
-class YieldOptimizationRequest(BaseModel):
+class DeploymentRequest(BaseModel):
     amount_usdc: float
-    max_risk: Optional[float] = None
-
-class RiskAssessmentRequest(BaseModel):
-    strategy_addresses: str
+    strategy_preference: str = "auto"
 
 class LotteryRequest(BaseModel):
     amount_usdc: float
 
 @app.post("/invoke-agent")
 async def invoke_enhanced_agent(request: AgentRequest):
-    """Enhanced agent endpoint with ML integration."""
+    """Enhanced agent endpoint with deployed contract integration and market data."""
     try:
         tool_descriptions = "\n".join([f"- {tool.name}: {tool.description}" for tool in tools])
         
         response = await agent_executor.ainvoke({
             "input": request.command,
-            "agent_address": agent_account.address,
             "vault_core_address": VAULT_CORE_ADDRESS,
             "lottery_extension": LOTTERY_EXTENSION,
-            "risk_oracle": RISK_ORACLE,
+            "usdc_address": USDC_ADDRESS,
             "strategy_registry": STRATEGY_REGISTRY,
-            "yield_aggregator": YIELD_AGGREGATOR,
+            "simple_superlend": SIMPLE_SUPERLEND_STRATEGY,
+            "simple_pancake": SIMPLE_PANCAKE_STRATEGY,
+            "lottery_strategy": LOTTERY_YIELD_STRATEGY,
             "tools": tool_descriptions,
             "tool_names": ", ".join(tool_names)
         })
@@ -883,71 +1407,75 @@ async def invoke_enhanced_agent(request: AgentRequest):
     except Exception as e:
         return {"success": False, "error": str(e)}
 
-@app.post("/optimize-yield")
-async def optimize_yield_endpoint(request: YieldOptimizationRequest):
-    """Dedicated yield optimization endpoint."""
-    try:
-        result = optimize_yield_allocation.invoke({
-            "amount_usdc": request.amount_usdc,
-            "max_risk": request.max_risk
-        })
-        return {"success": True, "optimization": result}
-    except Exception as e:
-        return {"success": False, "error": str(e)}
-
-@app.post("/assess-risk")
-async def assess_risk_endpoint(request: RiskAssessmentRequest):
-    """ML-powered risk assessment endpoint."""
-    try:
-        result = perform_ml_risk_assessment.invoke({
-            "strategy_addresses": request.strategy_addresses
-        })
-        return {"success": True, "assessment": result}
-    except Exception as e:
-        return {"success": False, "error": str(e)}
-
 @app.get("/comprehensive-status")
 async def comprehensive_status():
-    """Comprehensive vault status endpoint."""
+    """Get complete status of deployed vault and strategies."""
     try:
         result = get_comprehensive_vault_status.invoke({})
         return {"success": True, "status": result}
     except Exception as e:
         return {"success": False, "error": str(e)}
 
-@app.post("/execute-strategy")
-async def execute_strategy_endpoint(request: YieldOptimizationRequest):
-    """Execute optimal strategy deployment."""
+@app.get("/market-analysis")
+async def market_analysis():
+    """Get comprehensive market analysis and pricing data."""
     try:
-        result = execute_optimal_strategy_deployment.invoke({
+        result = get_market_analysis_and_pricing.invoke({})
+        return {"success": True, "market_analysis": result}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+@app.post("/harvest-strategies")
+async def harvest_strategies():
+    """Harvest yield from all deployed strategies."""
+    try:
+        result = harvest_all_deployed_strategies.invoke({})
+        return {"success": True, "harvest_results": result}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+@app.post("/execute-lottery-cycle")
+async def execute_lottery_cycle():
+    """Execute the complete weekly lottery cycle."""
+    try:
+        result = execute_weekly_lottery_cycle.invoke({})
+        return {"success": True, "lottery_cycle": result}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+@app.post("/deploy-to-strategy")
+async def deploy_to_strategy_endpoint(request: DeploymentRequest):
+    """Deploy funds to optimal strategy with market intelligence."""
+    try:
+        result = deploy_to_optimal_strategy.invoke({
             "amount_usdc": request.amount_usdc,
-            "max_risk": request.max_risk
+            "strategy_preference": request.strategy_preference
         })
-        return {"success": True, "execution": result}
+        return {"success": True, "deployment": result}
     except Exception as e:
         return {"success": False, "error": str(e)}
 
-@app.get("/cross-chain-analysis")
-async def cross_chain_analysis():
-    """Cross-chain opportunities analysis."""
+@app.get("/risk-assessment")
+async def risk_assessment():
+    """Get ML risk assessment for all deployed strategies with market adjustments."""
     try:
-        result = manage_cross_chain_opportunities.invoke({})
-        return {"success": True, "analysis": result}
+        result = perform_ml_risk_assessment_deployed_strategies.invoke({})
+        return {"success": True, "risk_assessment": result}
     except Exception as e:
         return {"success": False, "error": str(e)}
 
-@app.post("/manage-lottery")
-async def manage_lottery_endpoint():
-    """Lottery management endpoint."""
+@app.get("/rebalancing-analysis")
+async def rebalancing_analysis():
+    """Get strategy rebalancing recommendations with market intelligence."""
     try:
-        result = execute_lottery_management.invoke({})
-        return {"success": True, "lottery": result}
+        result = rebalance_strategy_allocations.invoke({})
+        return {"success": True, "rebalancing": result}
     except Exception as e:
         return {"success": False, "error": str(e)}
 
 @app.post("/simulate-yield")
 async def simulate_yield_endpoint(request: LotteryRequest):
-    """Enhanced yield simulation endpoint."""
+    """Simulate yield generation for testing."""
     try:
         result = simulate_yield_harvest_and_deposit.invoke({
             "amount_usdc": request.amount_usdc
@@ -956,24 +1484,106 @@ async def simulate_yield_endpoint(request: LotteryRequest):
     except Exception as e:
         return {"success": False, "error": str(e)}
 
-@app.get("/emergency-status")
-async def emergency_status():
-    """Emergency risk monitoring endpoint."""
+@app.get("/lottery-status")
+async def lottery_status():
+    """Get current lottery system status."""
     try:
-        result = emergency_risk_monitoring.invoke({})
-        return {"success": True, "emergency_status": result}
+        # Check if it's lottery execution time
+        should_execute = lottery_scheduler.should_execute_lottery()
+        
+        # Get lottery info
+        try:
+            lottery_info = lottery_extension.functions.getLotteryInfo().call()
+            prize_pool = float(lottery_info[0]) / 1e6
+            last_winner = lottery_info[1]
+            ready = lottery_info[2] if len(lottery_info) > 2 else False
+            time_left = int(lottery_info[3]) if len(lottery_info) > 3 else 0
+        except:
+            prize_pool = 0
+            last_winner = "Unknown"
+            ready = False
+            time_left = 0
+        
+        # Get participants
+        try:
+            depositors = lottery_extension.functions.getDepositors().call()
+            participants = len(depositors)
+        except:
+            participants = 0
+        
+        # Get market context
+        market_context = {}
+        if price_manager:
+            try:
+                eth_price = price_manager.get_price("ETH")
+                usdc_price = price_manager.get_price("USDC")
+                market_context = {
+                    "eth_price": f"${eth_price:.2f}",
+                    "usdc_price": f"${usdc_price:.4f}",
+                    "market_volatility": "HIGH" if eth_price < 1800 else "LOW" if eth_price > 2500 else "MEDIUM"
+                }
+            except:
+                market_context = {"error": "Price data unavailable"}
+        
+        status = {
+            "current_prize_pool": f"{prize_pool:.2f} USDC",
+            "participants": participants,
+            "last_winner": last_winner,
+            "lottery_ready": ready,
+            "time_until_next": f"{time_left/3600:.1f} hours",
+            "should_execute_now": should_execute,
+            "execution_schedule": {
+                "day": "Monday",
+                "time": f"{lottery_config.lottery_execution_hour}:00 UTC",
+                "cycle_days": lottery_config.weekly_cycle_days
+            },
+            "requirements": {
+                "min_prize_pool": f"{lottery_config.min_prize_pool} USDC",
+                "min_deposit": f"{lottery_config.min_deposit_for_lottery} USDC"
+            },
+            "market_context": market_context
+        }
+        
+        return {"success": True, "lottery_status": status}
     except Exception as e:
         return {"success": False, "error": str(e)}
 
 @app.get("/health")
 async def health_check():
-    """Comprehensive health check."""
+    """Comprehensive health check for deployed system."""
     try:
         latest_block = w3.eth.block_number
         agent_balance = w3.eth.get_balance(agent_account.address)
         
         # Test core contracts
         vault_balance = usdc_contract.functions.balanceOf(VAULT_CORE_ADDRESS).call()
+        
+        # Test strategies
+        strategy_health = {}
+        for name, address in STRATEGY_NAMES.items():
+            try:
+                strategy_contract = w3.eth.contract(address=address, abi=load_abi("strategy"))
+                balance = strategy_contract.functions.getBalance().call()
+                strategy_health[name] = {
+                    "address": address,
+                    "balance": f"{balance/1e6:.2f} USDC",
+                    "status": "HEALTHY"
+                }
+            except Exception as e:
+                strategy_health[name] = {
+                    "address": address,
+                    "status": "ERROR",
+                    "error": str(e)
+                }
+        
+        # Test price feeds
+        price_feed_status = "UNAVAILABLE"
+        if price_manager:
+            try:
+                eth_price = price_manager.get_price("ETH")
+                price_feed_status = "HEALTHY"
+            except:
+                price_feed_status = "ERROR"
         
         health_status = {
             "status": "healthy",
@@ -988,24 +1598,27 @@ async def health_check():
                 "balance_eth": float(w3.from_wei(agent_balance, 'ether')),
                 "vault_usdc_balance": vault_balance / 1e6
             },
-            "contracts": {
+            "deployed_contracts": {
                 "vault_core": VAULT_CORE_ADDRESS,
                 "lottery_extension": LOTTERY_EXTENSION,
                 "usdc_token": USDC_ADDRESS,
-                "risk_oracle": RISK_ORACLE,
-                "strategy_registry": STRATEGY_REGISTRY,
-                "yield_aggregator": YIELD_AGGREGATOR
+                "strategy_registry": STRATEGY_REGISTRY
             },
+            "deployed_strategies": strategy_health,
             "features": {
                 "ml_risk_model": RISK_MODEL_AVAILABLE,
-                "cross_chain_enabled": config.cross_chain_enabled,
-                "auto_rebalance_enabled": config.auto_rebalance_enabled,
-                "emergency_monitoring": True
+                "price_feeds": PRICE_FEEDS_AVAILABLE,
+                "price_feed_status": price_feed_status,
+                "weekly_lottery": True,
+                "automated_harvesting": True,
+                "risk_monitoring": True,
+                "market_intelligence": True
             },
-            "configuration": {
-                "max_risk_tolerance": f"{config.max_risk_tolerance/100}%",
-                "min_yield_threshold": f"{config.min_yield_threshold/100}%",
-                "lottery_interval": f"{config.lottery_interval_days} days"
+            "lottery_config": {
+                "cycle_days": lottery_config.weekly_cycle_days,
+                "execution_day": "Monday",
+                "execution_hour": f"{lottery_config.lottery_execution_hour}:00 UTC",
+                "min_prize_pool": f"{lottery_config.min_prize_pool} USDC"
             }
         }
         
@@ -1024,54 +1637,94 @@ async def health_check():
 @app.get("/")
 def read_root():
     return {
-        "message": "Advanced Etherlink Vault Manager is operational",
-        "version": "3.0.0",
-        "features": [
-            "ML-Powered Risk Assessment",
-            "Cross-Chain Yield Optimization", 
-            "Automated Lottery Management",
-            "Emergency Risk Monitoring",
-            "Real-Time Market Analysis",
-            "Autonomous Strategy Execution"
-        ],
-        "contracts": {
+        "message": "Enhanced Etherlink Vault Manager - Weekly Lottery System with Market Intelligence",
+        "version": "4.1.0",
+        "lottery_system": {
+            "cycle": "Weekly (7 days)",
+            "execution": "Monday 12:00 UTC",
+            "min_prize": f"{lottery_config.min_prize_pool} USDC",
+            "selection": "Deposit-weighted random"
+        },
+        "deployed_strategies": {
+            "simple_superlend_usdc": SIMPLE_SUPERLEND_STRATEGY,
+            "simple_pancake_usdc_weth": SIMPLE_PANCAKE_STRATEGY,
+            "lottery_yield": LOTTERY_YIELD_STRATEGY
+        },
+        "deployed_contracts": {
             "vault_core": VAULT_CORE_ADDRESS,
             "lottery_extension": LOTTERY_EXTENSION,
             "usdc_token": USDC_ADDRESS,
-            "risk_oracle": RISK_ORACLE,
-            "strategy_registry": STRATEGY_REGISTRY,
-            "yield_aggregator": YIELD_AGGREGATOR
+            "strategy_registry": STRATEGY_REGISTRY
         },
         "agent_address": agent_account.address,
         "ml_risk_available": RISK_MODEL_AVAILABLE,
-        "endpoints": [
-            "/invoke-agent - Natural language agent interaction",
-            "/optimize-yield - ML-powered yield optimization",
-            "/assess-risk - Strategy risk assessment",
+        "price_feeds_available": PRICE_FEEDS_AVAILABLE,
+        "key_features": [
+            "Weekly automated lottery execution",
+            "ML-powered strategy risk assessment",
+            "Real-time cryptocurrency price monitoring",
+            "Market volatility-adjusted strategy selection",
+            "Real strategy yield harvesting",
+            "Deposit-weighted prize distribution",
+            "Automated rebalancing with market intelligence",
+            "Emergency risk monitoring"
+        ],
+        "api_endpoints": [
             "/comprehensive-status - Full system status",
-            "/execute-strategy - Deploy optimal strategies",
-            "/cross-chain-analysis - Cross-chain opportunities",
-            "/manage-lottery - Lottery system management",
-            "/emergency-status - Emergency monitoring",
-            "/health - System health check"
+            "/market-analysis - Real-time market data and analysis",
+            "/harvest-strategies - Harvest from all strategies",
+            "/execute-lottery-cycle - Run weekly lottery",
+            "/deploy-to-strategy - Deploy to optimal strategy",
+            "/risk-assessment - ML risk analysis with market adjustments",
+            "/lottery-status - Current lottery information",
+            "/rebalancing-analysis - Strategy optimization with market data",
+            "/simulate-yield - Test yield generation"
         ]
     }
 
+# Background task for automated lottery execution
+@app.on_event("startup")
+async def startup_event():
+    """Initialize background tasks."""
+    def check_lottery_schedule():
+        """Check if lottery should be executed."""
+        if lottery_scheduler.should_execute_lottery():
+            lottery_scheduler.execute_automated_lottery()
+    
+    # Schedule lottery check every hour
+    schedule.every().hour.do(check_lottery_schedule)
+    
+    def run_scheduler():
+        """Run the scheduler in a separate thread."""
+        while True:
+            schedule.run_pending()
+            time.sleep(60)  # Check every minute
+    
+    # Start scheduler in background thread
+    scheduler_thread = threading.Thread(target=run_scheduler, daemon=True)
+    scheduler_thread.start()
+    
+    print("✅ Background lottery scheduler started")
+
 if __name__ == "__main__":
     import uvicorn
-    print("🚀 Starting Advanced Etherlink Vault Manager...")
+    print("🚀 Starting Enhanced Etherlink Vault Manager - Weekly Lottery System with Market Intelligence...")
     print(f"🧠 ML Risk Model: {'✅ Available' if RISK_MODEL_AVAILABLE else '❌ Unavailable'}")
-    print(f"🔗 Cross-Chain: {'✅ Enabled' if config.cross_chain_enabled else '❌ Disabled'}")
-    print(f"⚡ Auto-Rebalance: {'✅ Enabled' if config.auto_rebalance_enabled else '❌ Manual'}")
+    print(f"📈 Price Feeds: {'✅ Available' if PRICE_FEEDS_AVAILABLE else '❌ Unavailable'}")
+    print(f"🎰 Weekly Lottery: ✅ Enabled (Monday {lottery_config.lottery_execution_hour}:00 UTC)")
     print(f"🤖 Agent Address: {agent_account.address}")
     print(f"🏦 Vault Core: {VAULT_CORE_ADDRESS}")
-    print(f"🎰 Lottery Extension: {LOTTERY_EXTENSION}")
-    print(f"🔍 Risk Oracle: {RISK_ORACLE}")
-    print(f"📊 Yield Aggregator: {YIELD_AGGREGATOR}")
+    print(f"🎲 Lottery Extension: {LOTTERY_EXTENSION}")
+    print(f"💰 USDC Token: {USDC_ADDRESS}")
+    print("\n📋 Deployed Strategies:")
+    for name, address in STRATEGY_NAMES.items():
+        print(f"   {name}: {address}")
     
-    print("\n🎯 Ready for sophisticated DeFi operations!")
+    print("\n🎯 Ready for weekly lottery operations with market intelligence!")
     print("🌐 Server: http://localhost:8000")
     print("📚 API docs: http://localhost:8000/docs")
+    print("🎰 Lottery status: http://localhost:8000/lottery-status")
+    print("📈 Market analysis: http://localhost:8000/market-analysis")
     print("💊 Health: http://localhost:8000/health")
     
     uvicorn.run(app, host="0.0.0.0", port=8000)
