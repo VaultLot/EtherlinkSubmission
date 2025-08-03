@@ -1,12 +1,16 @@
-// Contract addresses (replace with actual deployed addresses)
+// Contract addresses for Etherlink Testnet
 export const CONTRACTS = {
-  VAULT: '0xBaE8f26eDa40Ab353A34ce38F8917318d226318F' as const,
-  FLOW_VRF_YIELD_STRATEGY: '0xf5DC9ca0518B45C3E372c3bC7959a4f3d1B18901' as const,
-  MOCK_USDC: '0x4edbDC8Ed8Ca935513A2F06e231EE42FB6ed1d15' as const,
-  VAULT_FACTORY: '0xa87fe90A07DE4E10398F2203A9F3Bd8b98Cf902D' as const,
+  VAULT: '0xB8B55df1B5AE01e6ABAf141F0D3CAC64303eFfB2' as const,
+  LOTTERY_EXTENSION: '0x779992660Eb4eb9C17AC38D4ABb79D07F0a1d374' as const,
+  MOCK_USDC: '0xc2E9E01F16764F8e63d5113Ec01b13cc968dB5Dc' as const,
+  MOCK_WETH: '0x9aD2A76D1f940C2eedFE7aBF5b55e6943a90cC41' as const,
+  RISK_ORACLE: '0x3e833aF4870F35e7F8c63f5E6CA1D884c305bc2e' as const,
+  STRATEGY_REGISTRY: '0x4Fd69BD63Ad6f2688239B496bbAF89390572693d' as const,
+  SUPERLEND_STRATEGY: '0x1864adaBc679B62Ae69A838309E5fB9435675D1A' as const,
+  PANCAKE_STRATEGY: '0x888e307EC9DeF2e038d545251f7b7F6c944b96d5' as const,
 } as const
 
-// Complete Vault ABI - Fixed to match your contract
+// Complete Vault ABI
 export const VAULT_ABI = [
   // ERC20 functions
   {
@@ -224,11 +228,11 @@ export const VAULT_ABI = [
   }
 ] as const
 
-// Complete FlowVrfYieldStrategy ABI - Based on your contract
-export const FLOW_VRF_YIELD_STRATEGY_ABI = [
+// Lottery Extension ABI
+export const LOTTERY_EXTENSION_ABI = [
   {
     "inputs": [],
-    "name": "getBalance",
+    "name": "accumulatedYield",
     "outputs": [
       {
         "internalType": "uint256",
@@ -254,7 +258,20 @@ export const FLOW_VRF_YIELD_STRATEGY_ABI = [
   },
   {
     "inputs": [],
-    "name": "totalDeposited",
+    "name": "lastPayout",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "totalLotteryDeposits",
     "outputs": [
       {
         "internalType": "uint256",
@@ -269,16 +286,31 @@ export const FLOW_VRF_YIELD_STRATEGY_ABI = [
     "inputs": [
       {
         "internalType": "address",
-        "name": "",
+        "name": "user",
         "type": "address"
       }
     ],
-    "name": "depositAmounts",
+    "name": "userDeposits",
     "outputs": [
       {
         "internalType": "uint256",
-        "name": "",
+        "name": "amount",
         "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "depositTime",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "totalRewards",
+        "type": "uint256"
+      },
+      {
+        "internalType": "bool",
+        "name": "active",
+        "type": "bool"
       }
     ],
     "stateMutability": "view",
@@ -286,11 +318,60 @@ export const FLOW_VRF_YIELD_STRATEGY_ABI = [
   },
   {
     "inputs": [],
-    "name": "paused",
+    "name": "getLotteryInfo",
     "outputs": [
       {
+        "internalType": "uint256",
+        "name": "prizePool",
+        "type": "uint256"
+      },
+      {
+        "internalType": "address",
+        "name": "winner",
+        "type": "address"
+      },
+      {
         "internalType": "bool",
-        "name": "",
+        "name": "lotteryReady",
+        "type": "bool"
+      },
+      {
+        "internalType": "uint256",
+        "name": "timeUntilLottery",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "user",
+        "type": "address"
+      }
+    ],
+    "name": "getUserLotteryInfo",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "currentDeposit",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "winProbability",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "lifetimeRewards",
+        "type": "uint256"
+      },
+      {
+        "internalType": "bool",
+        "name": "isActive",
         "type": "bool"
       }
     ],
@@ -358,6 +439,13 @@ export const MOCK_USDC_ABI = [
     "type": "function"
   },
   {
+    "inputs": [],
+    "name": "faucet",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
     "inputs": [
       {
         "internalType": "uint256",
@@ -365,7 +453,7 @@ export const MOCK_USDC_ABI = [
         "type": "uint256"
       }
     ],
-    "name": "faucet",
+    "name": "faucetWithAmount",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"

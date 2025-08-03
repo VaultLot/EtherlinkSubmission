@@ -5,6 +5,8 @@ node_modules
 
 backend/node_modules
 
-backend/.emv
+backend/.env
 backend/env
 
+frontend/.env
+frontend/env

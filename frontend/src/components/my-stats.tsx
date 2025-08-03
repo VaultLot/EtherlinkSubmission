@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
 import { useAccount, useReadContract } from 'wagmi'
-import { CONTRACTS, VAULT_ABI, FLOW_VRF_YIELD_STRATEGY_ABI } from '@/lib/contracts'
+import { CONTRACTS, VAULT_ABI, LOTTERY_EXTENSION_ABI } from '@/lib/contracts'
 import { formatTokenAmount } from '@/lib/utils'
 import { User, Percent, Trophy, TrendingUp } from 'lucide-react'
 import { useEffect } from 'react'
@@ -39,20 +39,28 @@ export function MyStats() {
     args: sharesBalance ? [sharesBalance] : undefined,
   })
 
-  // Read user's deposit amount from strategy
-  const { data: userDepositInStrategy } = useReadContract({
-    address: CONTRACTS.FLOW_VRF_YIELD_STRATEGY,
-    abi: FLOW_VRF_YIELD_STRATEGY_ABI,
-    functionName: 'depositAmounts',
+  // Read user's lottery information from lottery extension
+  const { data: userLotteryInfo } = useReadContract({
+    address: CONTRACTS.LOTTERY_EXTENSION,
+    abi: LOTTERY_EXTENSION_ABI,
+    functionName: 'getUserLotteryInfo',
     args: address ? [address] : undefined,
   })
 
   // Read current prize pool
-  const { data: prizePool } = useReadContract({
-    address: CONTRACTS.FLOW_VRF_YIELD_STRATEGY,
-    abi: FLOW_VRF_YIELD_STRATEGY_ABI,
-    functionName: 'getBalance',
+  const { data: lotteryInfo } = useReadContract({
+    address: CONTRACTS.LOTTERY_EXTENSION,
+    abi: LOTTERY_EXTENSION_ABI,
+    functionName: 'getLotteryInfo',
   })
+
+  const prizePool = lotteryInfo ? lotteryInfo[0] : BigInt(0) // prizePool
+
+  // Parse user lottery info
+  const userLotteryDeposit = userLotteryInfo ? userLotteryInfo[0] : BigInt(0) // currentDeposit
+  const winProbability = userLotteryInfo ? Number(userLotteryInfo[1]) / 100 : 0 // winProbability in percentage
+  const lifetimeRewards = userLotteryInfo ? userLotteryInfo[2] : BigInt(0) // lifetimeRewards
+  const isLotteryActive = userLotteryInfo ? userLotteryInfo[3] : false // isActive
 
   // Auto-refresh every 30 seconds
   useEffect(() => {
@@ -73,24 +81,12 @@ export function MyStats() {
     )
   }
 
-  // Calculate user's deposit amount and winning chance
+  // Calculate user's deposit amount
   const userDeposit = userAssets ? formatTokenAmount(userAssets, 6) : '0.00' // USDC has 6 decimals
   const totalValue = totalAssets ? formatTokenAmount(totalAssets, 6) : '0.00'
 
-  // Winning chance based on shares proportion
-  const winningChance = sharesBalance && totalSupply && totalSupply > 0n
-    ? (Number(sharesBalance) / Number(totalSupply)) * 100
-    : 0
-
-  // Calculate potential winnings (user's share of prize pool)
-  const potentialWinnings = sharesBalance && totalSupply && prizePool && totalSupply > 0n
-    ? (sharesBalance * prizePool) / totalSupply
-    : BigInt(0)
-
-  // Calculate yield earned (difference between current value and deposits)
-  const yieldEarned = userAssets && userDepositInStrategy && userAssets > userDepositInStrategy
-    ? userAssets - userDepositInStrategy
-    : BigInt(0)
+  // Calculate potential winnings (entire prize pool if user wins)
+  const potentialWinnings = prizePool
 
   const hasDeposits = sharesBalance && sharesBalance > 0n
 
@@ -148,16 +144,16 @@ export function MyStats() {
                 <div className="flex items-center space-x-2">
                   <Percent className="w-4 h-4 text-purple-600" />
                   <span className="text-lg font-bold text-purple-600">
-                    {winningChance.toFixed(4)}%
+                    {winProbability.toFixed(4)}%
                   </span>
                 </div>
               </div>
               <Progress 
-                value={Math.min(winningChance, 100)} 
+                value={Math.min(winProbability, 100)} 
                 className="h-2"
               />
               <div className="text-xs text-gray-500">
-                Based on your share of the total pool ({totalSupply ? formatTokenAmount(totalSupply, 18, 2) : '0.00'} total shares)
+                Based on your share of the total lottery pool ({userLotteryDeposit ? formatTokenAmount(userLotteryDeposit, 6) : '0.00'} USDC deposited)
               </div>
             </div>
 
@@ -178,19 +174,19 @@ export function MyStats() {
               </div>
             )}
 
-            {yieldEarned > 0n && (
+            {lifetimeRewards > 0n && (
               <div className="space-y-2">
                 <div className="flex justify-between items-center">
-                  <span className="text-sm font-medium text-gray-600">Yield Earned</span>
+                  <span className="text-sm font-medium text-gray-600">Lifetime Rewards</span>
                   <div className="flex items-center space-x-2">
                     <TrendingUp className="w-4 h-4 text-green-600" />
                     <span className="text-lg font-bold text-green-600">
-                      +${formatTokenAmount(yieldEarned, 6)} USDC
+                      +${formatTokenAmount(lifetimeRewards, 6)} USDC
                     </span>
                   </div>
                 </div>
                 <div className="text-xs text-gray-500">
-                  Interest earned on your deposits
+                  Total prizes won from lottery draws
                 </div>
               </div>
             )}
@@ -207,6 +203,17 @@ export function MyStats() {
                 <p>• Only yield goes to prizes, never your principal</p>
               </div>
             </div>
+
+            {isLotteryActive && (
+              <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                <div className="text-sm font-medium text-green-800">
+                  🎲 You're entered in the next lottery draw!
+                </div>
+                <div className="text-xs text-green-600 mt-1">
+                  Lottery deposit: ${userLotteryDeposit ? formatTokenAmount(userLotteryDeposit, 6) : '0.00'} USDC
+                </div>
+              </div>
+            )}
           </>
         )}
       </CardContent>
