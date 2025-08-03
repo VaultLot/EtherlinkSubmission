@@ -1,5 +1,7 @@
 # Etherlink AI-Powered No Loss Lottery 🚀
 
+[App](https://fomo-insurance-cpjq.vercel.app/)
+
 > **Production-ready AI agent for weekly yield lottery with ML risk assessment and real-time market intelligence**
 
 **Where financial growth meets the thrill of the win. We are turning passive savings into an active, rewarding experience you can't lose.**
